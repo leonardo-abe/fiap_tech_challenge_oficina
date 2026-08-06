@@ -12,6 +12,7 @@ from app.infrastructure.db.session import get_session
 from app.infrastructure.persistence.usuario.repository import SQLAlchemyUsuarioRepository
 from app.infrastructure.security.jwt_provider import JWTTokenProvider
 from app.infrastructure.security.password_hasher import BcryptPasswordHasher
+from app.presentation.api.v1.auth.controller import AuthController
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -40,6 +41,12 @@ def get_autenticar_usuario_use_case(
         password_hasher=password_hasher,
         token_provider=token_provider,
     )
+
+
+def get_auth_controller(
+    autenticar_use_case: AutenticarUsuarioUseCase = Depends(get_autenticar_usuario_use_case),
+) -> AuthController:
+    return AuthController(autenticar_use_case=autenticar_use_case)
 
 
 def get_criar_usuario_use_case(
