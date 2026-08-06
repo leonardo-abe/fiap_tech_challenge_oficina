@@ -6,6 +6,7 @@ from app.domain.cliente.exceptions import (
     DocumentoInvalidoError,
     DocumentoJaCadastradoError,
 )
+from app.domain.servico.exceptions import ServicoNaoEncontradoError
 from app.domain.usuario.exceptions import (
     CredenciaisInvalidasError,
     EmailJaCadastradoError,
@@ -50,6 +51,12 @@ def registrar_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ClienteNaoEncontradoError)
     async def _cliente_nao_encontrado(
         request: Request, exc: ClienteNaoEncontradoError
+    ) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
+
+    @app.exception_handler(ServicoNaoEncontradoError)
+    async def _servico_nao_encontrado(
+        request: Request, exc: ServicoNaoEncontradoError
     ) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
 
