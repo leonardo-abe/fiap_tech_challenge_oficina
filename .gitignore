@@ -1,0 +1,28 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+.python-version
+
+# Environment variables (real secrets never go into git)
+.env
+
+# Test coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Material do desafio (não faz parte do código-fonte entregável)
+/*.pdf
