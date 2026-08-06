@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "postgresql+asyncpg://oficina:oficina@localhost:5432/oficina"
 
+    jwt_secret_key: str = "change-me-in-production"  # noqa: S105 - placeholder, sobrescrito por env var
+    jwt_expiracao_minutos: int = 60
+
+    seed_admin_email: str = "admin@oficina.com.br"
+    seed_admin_senha: str = "admin123"
+
 
 @lru_cache
 def get_settings() -> Settings:

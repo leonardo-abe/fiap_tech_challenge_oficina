@@ -1,0 +1,34 @@
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+
+from app.domain.usuario.exceptions import (
+    CredenciaisInvalidasError,
+    EmailJaCadastradoError,
+    TokenInvalidoError,
+)
+
+
+def registrar_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(CredenciaisInvalidasError)
+    async def _credenciais_invalidas(
+        request: Request, exc: CredenciaisInvalidasError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "E-mail ou senha inválidos."},
+        )
+
+    @app.exception_handler(EmailJaCadastradoError)
+    async def _email_ja_cadastrado(request: Request, exc: EmailJaCadastradoError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "Já existe um usuário com este e-mail."},
+        )
+
+    @app.exception_handler(TokenInvalidoError)
+    async def _token_invalido(request: Request, exc: TokenInvalidoError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Token inválido ou expirado."},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
