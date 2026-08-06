@@ -15,7 +15,7 @@ class SQLAlchemyServicoRepository:
             nome=servico.nome, descricao=servico.descricao, preco=servico.preco.valor
         )
         self._session.add(model)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return self._to_entity(model)
 
@@ -32,14 +32,14 @@ class SQLAlchemyServicoRepository:
         model.nome = servico.nome
         model.descricao = servico.descricao
         model.preco = servico.preco.valor
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return self._to_entity(model)
 
     async def remover(self, servico_id: int) -> None:
         model = await self._session.get(ServicoModel, servico_id)
         await self._session.delete(model)
-        await self._session.commit()
+        await self._session.flush()
 
     @staticmethod
     def _to_entity(model: ServicoModel) -> Servico:

@@ -19,7 +19,7 @@ class SQLAlchemyVeiculoRepository:
             ano=veiculo.ano,
         )
         self._session.add(model)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return self._to_entity(model)
 
@@ -47,14 +47,14 @@ class SQLAlchemyVeiculoRepository:
         model.marca = veiculo.marca
         model.modelo = veiculo.modelo
         model.ano = veiculo.ano
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return self._to_entity(model)
 
     async def remover(self, veiculo_id: int) -> None:
         model = await self._session.get(VeiculoModel, veiculo_id)
         await self._session.delete(model)
-        await self._session.commit()
+        await self._session.flush()
 
     @staticmethod
     def _to_entity(model: VeiculoModel) -> Veiculo:
