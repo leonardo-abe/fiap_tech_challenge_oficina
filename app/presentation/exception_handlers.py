@@ -6,6 +6,11 @@ from app.domain.cliente.exceptions import (
     DocumentoInvalidoError,
     DocumentoJaCadastradoError,
 )
+from app.domain.peca.exceptions import (
+    EstoqueInsuficienteError,
+    PecaNaoEncontradaError,
+    QuantidadeInvalidaError,
+)
 from app.domain.servico.exceptions import ServicoNaoEncontradoError
 from app.domain.usuario.exceptions import (
     CredenciaisInvalidasError,
@@ -52,6 +57,22 @@ def registrar_exception_handlers(app: FastAPI) -> None:
     async def _cliente_nao_encontrado(
         request: Request, exc: ClienteNaoEncontradoError
     ) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
+
+    @app.exception_handler(QuantidadeInvalidaError)
+    async def _quantidade_invalida(request: Request, exc: QuantidadeInvalidaError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+        )
+
+    @app.exception_handler(EstoqueInsuficienteError)
+    async def _estoque_insuficiente(
+        request: Request, exc: EstoqueInsuficienteError
+    ) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
+
+    @app.exception_handler(PecaNaoEncontradaError)
+    async def _peca_nao_encontrada(request: Request, exc: PecaNaoEncontradaError) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
 
     @app.exception_handler(ServicoNaoEncontradoError)
