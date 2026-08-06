@@ -5,7 +5,11 @@ description = "Backend MVP do Sistema Integrado de Atendimento e Execução de S
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.19.0",
+    "asyncpg>=0.31.0",
     "fastapi[standard]>=0.115",
+    "pydantic-settings>=2.14.2",
+    "sqlalchemy[asyncio]>=2.0.51",
 ]
 
 [dependency-groups]
