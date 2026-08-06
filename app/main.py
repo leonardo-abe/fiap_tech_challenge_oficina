@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.presentation.api.v1.auth.router import router as auth_router
 from app.presentation.api.v1.clientes.router import router as clientes_router
+from app.presentation.api.v1.ordens_servico.router import router as ordens_servico_router
 from app.presentation.api.v1.pecas.router import router as pecas_router
 from app.presentation.api.v1.servicos.router import router as servicos_router
 from app.presentation.api.v1.usuarios.router import router as usuarios_router
@@ -19,6 +20,7 @@ app.include_router(clientes_router)
 app.include_router(veiculos_router)
 app.include_router(servicos_router)
 app.include_router(pecas_router)
+app.include_router(ordens_servico_router)
 
 
 @app.get("/health", tags=["health"])

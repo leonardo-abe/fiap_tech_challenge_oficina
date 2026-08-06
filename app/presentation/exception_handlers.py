@@ -6,6 +6,11 @@ from app.domain.cliente.exceptions import (
     DocumentoInvalidoError,
     DocumentoJaCadastradoError,
 )
+from app.domain.ordem_servico.exceptions import (
+    OrdemServicoSemItensError,
+    QuantidadeItemInvalidaError,
+    VeiculoNaoPertenceAoClienteError,
+)
 from app.domain.peca.exceptions import (
     EstoqueInsuficienteError,
     PecaNaoEncontradaError,
@@ -80,6 +85,30 @@ def registrar_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: ServicoNaoEncontradoError
     ) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
+
+    @app.exception_handler(VeiculoNaoPertenceAoClienteError)
+    async def _veiculo_nao_pertence_ao_cliente(
+        request: Request, exc: VeiculoNaoPertenceAoClienteError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+        )
+
+    @app.exception_handler(OrdemServicoSemItensError)
+    async def _ordem_servico_sem_itens(
+        request: Request, exc: OrdemServicoSemItensError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+        )
+
+    @app.exception_handler(QuantidadeItemInvalidaError)
+    async def _quantidade_item_invalida(
+        request: Request, exc: QuantidadeItemInvalidaError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+        )
 
     @app.exception_handler(CredenciaisInvalidasError)
     async def _credenciais_invalidas(
