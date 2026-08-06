@@ -7,8 +7,10 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.19.0",
     "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
     "fastapi[standard]>=0.115",
     "pydantic-settings>=2.14.2",
+    "pyjwt>=2.13.0",
     "sqlalchemy[asyncio]>=2.0.51",
 ]
 
@@ -23,9 +25,15 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# migrations/versions são gerados pelo Alembic (autogenerate) - não são código escrito à mão.
+extend-exclude = ["migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends()/Query() em argumento default são o padrão idiomático de DI do FastAPI.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

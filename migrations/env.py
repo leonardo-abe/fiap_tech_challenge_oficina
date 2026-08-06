@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.infrastructure.persistence  # noqa: F401 - registra os models em Base.metadata
 from app.infrastructure.db.session import Base
 from app.shared.settings import settings
 
