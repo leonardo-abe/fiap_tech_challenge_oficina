@@ -18,7 +18,7 @@ class SQLAlchemyClienteRepository:
             telefone=cliente.telefone,
         )
         self._session.add(model)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return self._to_entity(model)
 
@@ -42,14 +42,14 @@ class SQLAlchemyClienteRepository:
         model.documento = cliente.documento.valor
         model.email = cliente.email
         model.telefone = cliente.telefone
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return self._to_entity(model)
 
     async def remover(self, cliente_id: int) -> None:
         model = await self._session.get(ClienteModel, cliente_id)
         await self._session.delete(model)
-        await self._session.commit()
+        await self._session.flush()
 
     @staticmethod
     def _to_entity(model: ClienteModel) -> Cliente:

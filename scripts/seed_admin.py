@@ -25,6 +25,9 @@ async def seed_admin() -> None:
                     perfil=Perfil.ADMIN,
                 )
             )
+            # fora do ciclo de request do FastAPI: get_session não está aqui pra comitar,
+            # então o script precisa comitar a própria Unit of Work explicitamente.
+            await session.commit()
             print(f"Admin criado: {settings.seed_admin_email}")
         except EmailJaCadastradoError:
             print(f"Admin já existe: {settings.seed_admin_email}")
