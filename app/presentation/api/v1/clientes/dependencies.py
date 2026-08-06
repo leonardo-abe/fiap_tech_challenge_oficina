@@ -10,6 +10,7 @@ from app.application.cliente.use_cases import (
 )
 from app.infrastructure.db.session import get_session
 from app.infrastructure.persistence.cliente.repository import SQLAlchemyClienteRepository
+from app.presentation.api.v1.clientes.controller import ClienteController
 
 
 def get_cliente_repository(
@@ -46,3 +47,19 @@ def get_remover_cliente_use_case(
     cliente_repository: SQLAlchemyClienteRepository = Depends(get_cliente_repository),
 ) -> RemoverClienteUseCase:
     return RemoverClienteUseCase(cliente_repository=cliente_repository)
+
+
+def get_cliente_controller(
+    criar_use_case: CriarClienteUseCase = Depends(get_criar_cliente_use_case),
+    atualizar_use_case: AtualizarClienteUseCase = Depends(get_atualizar_cliente_use_case),
+    buscar_use_case: BuscarClienteUseCase = Depends(get_buscar_cliente_use_case),
+    listar_use_case: ListarClientesUseCase = Depends(get_listar_clientes_use_case),
+    remover_use_case: RemoverClienteUseCase = Depends(get_remover_cliente_use_case),
+) -> ClienteController:
+    return ClienteController(
+        criar_use_case=criar_use_case,
+        atualizar_use_case=atualizar_use_case,
+        buscar_use_case=buscar_use_case,
+        listar_use_case=listar_use_case,
+        remover_use_case=remover_use_case,
+    )
