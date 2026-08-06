@@ -11,9 +11,30 @@ from app.domain.usuario.exceptions import (
     EmailJaCadastradoError,
     TokenInvalidoError,
 )
+from app.domain.veiculo.exceptions import (
+    PlacaInvalidaError,
+    PlacaJaCadastradaError,
+    VeiculoNaoEncontradoError,
+)
 
 
 def registrar_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(PlacaInvalidaError)
+    async def _placa_invalida(request: Request, exc: PlacaInvalidaError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": str(exc)}
+        )
+
+    @app.exception_handler(PlacaJaCadastradaError)
+    async def _placa_ja_cadastrada(request: Request, exc: PlacaJaCadastradaError) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
+
+    @app.exception_handler(VeiculoNaoEncontradoError)
+    async def _veiculo_nao_encontrado(
+        request: Request, exc: VeiculoNaoEncontradoError
+    ) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
+
     @app.exception_handler(DocumentoInvalidoError)
     async def _documento_invalido(request: Request, exc: DocumentoInvalidoError) -> JSONResponse:
         return JSONResponse(
