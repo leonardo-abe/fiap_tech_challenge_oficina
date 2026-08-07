@@ -1,11 +1,6 @@
 from app.application.cliente.ports import ClienteRepositoryProtocol
-from app.application.ordem_servico.dtos import (
-    CriarOrdemServicoInput,
-    ItemPecaOutput,
-    ItemServicoOutput,
-    OrcamentoOutput,
-    OrdemServicoOutput,
-)
+from app.application.ordem_servico.dtos import CriarOrdemServicoInput, OrdemServicoOutput
+from app.application.ordem_servico.mappers import ordem_servico_to_output
 from app.application.ordem_servico.ports import OrdemServicoRepositoryProtocol
 from app.application.peca.ports import PecaRepositoryProtocol
 from app.application.servico.ports import ServicoRepositoryProtocol
@@ -79,37 +74,4 @@ class CriarOrdemServicoUseCase:
         ordem.validar_possui_itens()
         ordem_criada = await self._ordem_servico_repository.criar(ordem)
 
-        return self._to_output(ordem_criada)
-
-    @staticmethod
-    def _to_output(ordem: OrdemServico) -> OrdemServicoOutput:
-        orcamento = ordem.calcular_orcamento()
-
-        return OrdemServicoOutput(
-            id=ordem.id,
-            cliente_id=ordem.cliente_id,
-            veiculo_id=ordem.veiculo_id,
-            status=ordem.status.value,
-            recebida_em=ordem.recebida_em,
-            orcamento=OrcamentoOutput(
-                total_servicos=orcamento.total_servicos.valor,
-                total_pecas=orcamento.total_pecas.valor,
-                total=orcamento.total.valor,
-            ),
-            itens_servico=[
-                ItemServicoOutput(
-                    servico_id=item.servico_id, nome=item.nome, valor=item.valor.valor
-                )
-                for item in ordem.itens_servico
-            ],
-            itens_peca=[
-                ItemPecaOutput(
-                    peca_id=item.peca_id,
-                    nome=item.nome,
-                    quantidade=item.quantidade,
-                    valor_unitario=item.valor_unitario.valor,
-                    valor_total=item.valor_total.valor,
-                )
-                for item in ordem.itens_peca
-            ],
-        )
+        return ordem_servico_to_output(ordem_criada)

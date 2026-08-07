@@ -60,6 +60,17 @@ class SQLAlchemyOrdemServicoRepository:
         model = resultado.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
+    async def listar(self) -> list[OrdemServico]:
+        resultado = await self._session.execute(
+            select(OrdemServicoModel)
+            .options(
+                selectinload(OrdemServicoModel.itens_servico),
+                selectinload(OrdemServicoModel.itens_peca),
+            )
+            .order_by(OrdemServicoModel.recebida_em.desc())
+        )
+        return [self._to_entity(model) for model in resultado.scalars().all()]
+
     async def atualizar(self, ordem: OrdemServico) -> OrdemServico:
         model = await self._session.get(OrdemServicoModel, ordem.id)
         model.status = ordem.status

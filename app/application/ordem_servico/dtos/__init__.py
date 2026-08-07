@@ -5,6 +5,9 @@ from app.application.ordem_servico.dtos.item_servico_input import ItemServicoInp
 from app.application.ordem_servico.dtos.item_servico_output import ItemServicoOutput
 from app.application.ordem_servico.dtos.orcamento_output import OrcamentoOutput
 from app.application.ordem_servico.dtos.ordem_servico_output import OrdemServicoOutput
+from app.application.ordem_servico.dtos.status_ordem_servico_output import (
+    StatusOrdemServicoOutput,
+)
 
 __all__ = [
     "CriarOrdemServicoInput",
@@ -14,4 +17,5 @@ __all__ = [
     "ItemServicoOutput",
     "OrcamentoOutput",
     "OrdemServicoOutput",
+    "StatusOrdemServicoOutput",
 ]
