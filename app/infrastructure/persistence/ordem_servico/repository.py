@@ -1,4 +1,6 @@
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.domain.ordem_servico.entities import ItemPeca, ItemServico, OrdemServico
 from app.domain.ordem_servico.value_objects import StatusOS
@@ -43,6 +45,26 @@ class SQLAlchemyOrdemServicoRepository:
         # (via relationship); refresh() aqui expiraria as coleções e o acesso a
         # model.itens_servico/itens_peca faria lazy-load síncrono, que não funciona
         # no motor assíncrono (MissingGreenlet).
+        await self._session.flush()
+        return self._to_entity(model)
+
+    async def buscar_por_id(self, ordem_id: int) -> OrdemServico | None:
+        resultado = await self._session.execute(
+            select(OrdemServicoModel)
+            .options(
+                selectinload(OrdemServicoModel.itens_servico),
+                selectinload(OrdemServicoModel.itens_peca),
+            )
+            .where(OrdemServicoModel.id == ordem_id)
+        )
+        model = resultado.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def atualizar(self, ordem: OrdemServico) -> OrdemServico:
+        model = await self._session.get(OrdemServicoModel, ordem.id)
+        model.status = ordem.status
+        model.execucao_iniciada_em = ordem.execucao_iniciada_em
+        model.finalizada_em = ordem.finalizada_em
         await self._session.flush()
         return self._to_entity(model)
 
