@@ -49,15 +49,7 @@ class SQLAlchemyOrdemServicoRepository:
         return self._to_entity(model)
 
     async def buscar_por_id(self, ordem_id: int) -> OrdemServico | None:
-        resultado = await self._session.execute(
-            select(OrdemServicoModel)
-            .options(
-                selectinload(OrdemServicoModel.itens_servico),
-                selectinload(OrdemServicoModel.itens_peca),
-            )
-            .where(OrdemServicoModel.id == ordem_id)
-        )
-        model = resultado.scalar_one_or_none()
+        model = await self._buscar_model_com_itens(ordem_id)
         return self._to_entity(model) if model else None
 
     async def listar(self) -> list[OrdemServico]:
@@ -72,12 +64,28 @@ class SQLAlchemyOrdemServicoRepository:
         return [self._to_entity(model) for model in resultado.scalars().all()]
 
     async def atualizar(self, ordem: OrdemServico) -> OrdemServico:
-        model = await self._session.get(OrdemServicoModel, ordem.id)
+        # busca com os itens já carregados (não usa session.get()) porque o identity map
+        # é por referência fraca: o model da consulta anterior pode já ter sido coletado
+        # pelo GC, e um session.get() puro traria um model novo sem itens_servico/itens_peca
+        # carregados - _to_entity acessando essas coleções lazy dispararia uma query
+        # síncrona fora do greenlet do SQLAlchemy async (MissingGreenlet).
+        model = await self._buscar_model_com_itens(ordem.id)
         model.status = ordem.status
         model.execucao_iniciada_em = ordem.execucao_iniciada_em
         model.finalizada_em = ordem.finalizada_em
         await self._session.flush()
         return self._to_entity(model)
+
+    async def _buscar_model_com_itens(self, ordem_id: int) -> OrdemServicoModel | None:
+        resultado = await self._session.execute(
+            select(OrdemServicoModel)
+            .options(
+                selectinload(OrdemServicoModel.itens_servico),
+                selectinload(OrdemServicoModel.itens_peca),
+            )
+            .where(OrdemServicoModel.id == ordem_id)
+        )
+        return resultado.scalar_one_or_none()
 
     @staticmethod
     def _to_entity(model: OrdemServicoModel) -> OrdemServico:

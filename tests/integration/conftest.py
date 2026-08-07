@@ -26,14 +26,18 @@ async def engine():
     await test_engine.dispose()
 
 
+async def truncate_all_tables(engine) -> None:
+    async with engine.begin() as connection:
+        for table in reversed(Base.metadata.sorted_tables):
+            await connection.execute(
+                text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE')
+            )
+
+
 @pytest.fixture
 async def session(engine) -> AsyncSession:
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as db_session:
         yield db_session
 
-    async with engine.begin() as connection:
-        for table in reversed(Base.metadata.sorted_tables):
-            await connection.execute(
-                text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE')
-            )
+    await truncate_all_tables(engine)
