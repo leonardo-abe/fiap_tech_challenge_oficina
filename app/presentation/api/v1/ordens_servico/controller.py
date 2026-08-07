@@ -4,13 +4,17 @@ from app.application.ordem_servico.dtos import (
     ItemServicoInput,
 )
 from app.application.ordem_servico.use_cases import (
+    BuscarOrdemServicoUseCase,
+    ConsultarStatusOrdemServicoUseCase,
     CriarOrdemServicoUseCase,
+    ListarOrdensServicoUseCase,
     MudarStatusOrdemServicoUseCase,
 )
 from app.domain.ordem_servico.value_objects import StatusOS
 from app.presentation.api.v1.ordens_servico.schemas import (
     OrdemServicoCreateSchema,
     OrdemServicoSchema,
+    OrdemServicoStatusSchema,
 )
 
 
@@ -19,9 +23,15 @@ class OrdemServicoController:
         self,
         criar_use_case: CriarOrdemServicoUseCase,
         mudar_status_use_case: MudarStatusOrdemServicoUseCase,
+        listar_use_case: ListarOrdensServicoUseCase,
+        buscar_use_case: BuscarOrdemServicoUseCase,
+        consultar_status_use_case: ConsultarStatusOrdemServicoUseCase,
     ) -> None:
         self._criar_use_case = criar_use_case
         self._mudar_status_use_case = mudar_status_use_case
+        self._listar_use_case = listar_use_case
+        self._buscar_use_case = buscar_use_case
+        self._consultar_status_use_case = consultar_status_use_case
 
     async def criar(self, dados: OrdemServicoCreateSchema) -> OrdemServicoSchema:
         resultado = await self._criar_use_case.executar(
@@ -63,3 +73,15 @@ class OrdemServicoController:
     async def _mudar_status(self, ordem_id: int, novo_status: StatusOS) -> OrdemServicoSchema:
         resultado = await self._mudar_status_use_case.executar(ordem_id, novo_status)
         return OrdemServicoSchema.model_validate(resultado)
+
+    async def listar(self) -> list[OrdemServicoSchema]:
+        resultado = await self._listar_use_case.executar()
+        return [OrdemServicoSchema.model_validate(item) for item in resultado]
+
+    async def buscar(self, ordem_id: int) -> OrdemServicoSchema:
+        resultado = await self._buscar_use_case.executar(ordem_id)
+        return OrdemServicoSchema.model_validate(resultado)
+
+    async def consultar_status(self, ordem_id: int, documento: str) -> OrdemServicoStatusSchema:
+        resultado = await self._consultar_status_use_case.executar(ordem_id, documento)
+        return OrdemServicoStatusSchema.model_validate(resultado)

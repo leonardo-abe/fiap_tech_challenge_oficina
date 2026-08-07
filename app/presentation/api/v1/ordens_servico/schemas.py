@@ -57,3 +57,13 @@ class OrdemServicoSchema(BaseModel):
     orcamento: OrcamentoSchema
     itens_servico: list[ItemServicoSchema]
     itens_peca: list[ItemPecaSchema]
+
+
+class OrdemServicoStatusSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    status: str
+    recebida_em: datetime
+    execucao_iniciada_em: datetime | None
+    finalizada_em: datetime | None
