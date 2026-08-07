@@ -37,8 +37,9 @@ select = ["E", "F", "I", "UP", "B", "S"]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body"]
 
 [tool.ruff.lint.per-file-ignores]
-# assert é a forma idiomática de asserção do pytest, não um risco de segurança aqui.
-"tests/**" = ["S101"]
+# assert é a forma idiomática de asserção do pytest, não um risco de segurança aqui;
+# S105 dispara em falso positivo para tokens/hashes de teste fixos e conhecidos.
+"tests/**" = ["S101", "S105"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
