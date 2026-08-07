@@ -51,6 +51,30 @@ humana explícita (status Safe/Fixed/Acknowledged na própria interface) em vez 
 suprimir via comentário no código. Isso é intencional: força alguém a efetivamente olhar
 cada caso antes de descartá-lo.
 
+### SonarQube Cloud (integração direta com o GitHub) — Quality Gate
+
+Além da rodada local (self-hosted, acima), o repositório foi integrado diretamente ao
+SonarQube Cloud via GitHub. Snapshot do dashboard ("Overall Code"), após as correções
+desta rodada:
+
+| Métrica | Resultado |
+|---|---|
+| Quality Gate ("Sonar way") | ✅ Passed |
+| Security | `E` — 6 issues em aberto |
+| Reliability | `A` — 0 issues em aberto |
+| Maintainability | `A` — 33 issues em aberto (code smells) |
+| Duplications | 0.0% |
+| Coverage | Não configurada nesta integração (exige um passo extra de setup no SonarQube Cloud) |
+| Security Hotspots (métrica legada, sendo descontinuada) | 0 |
+
+O Quality Gate padrão ("Sonar way") avalia principalmente métricas de *New Code*, não de
+*Overall Code* — por isso ele aparece como "Passed" mesmo com o rating de Security em `E`
+no código já existente. Os 6 issues de Security e os 33 de Maintainability ainda não foram
+triados individualmente item a item (fica para uma próxima rodada). A cobertura de testes
+real do projeto (100% em `domain`/`application`, 98% em `app/` inteiro, ver
+[README.md](../README.md#testes)) não é reportada automaticamente para o SonarQube Cloud
+sem esse passo extra de integração.
+
 ## Cobertura por categoria do OWASP Top 10 (2021)
 
 Como os scanners não encontraram achados, esta seção documenta como cada categoria do

@@ -192,6 +192,35 @@ def gerar_relatorio_pdf(
         "supressao via comentario no codigo.",
     )
 
+    _h3(pdf, "SonarQube Cloud (integracao direta com o GitHub) - Quality Gate")
+    _paragrafo(
+        pdf,
+        "Alem da rodada local (self-hosted, acima), o repositorio foi integrado "
+        "diretamente ao SonarQube Cloud via GitHub. Snapshot do dashboard (Overall "
+        "Code), apos as correcoes desta rodada:",
+    )
+    _paragrafo(
+        pdf,
+        "- Quality Gate (Sonar way): Passed\n"
+        "- Security: E - 6 issues em aberto\n"
+        "- Reliability: A - 0 issues em aberto\n"
+        "- Maintainability: A - 33 issues em aberto (code smells)\n"
+        "- Duplications: 0.0%\n"
+        "- Coverage: nao configurada nesta integracao (exige um passo extra de setup no "
+        "SonarQube Cloud)\n"
+        "- Security Hotspots (metrica legada, sendo descontinuada): 0",
+    )
+    _paragrafo(
+        pdf,
+        "O Quality Gate padrao (Sonar way) avalia principalmente metricas de New Code, "
+        "nao de Overall Code - por isso aparece como Passed mesmo com o rating de "
+        "Security em E no codigo ja existente. Os 6 issues de Security e os 33 de "
+        "Maintainability ainda nao foram triados individualmente item a item (fica para "
+        "uma proxima rodada). A cobertura de testes real do projeto (100% em "
+        "domain/application, 98% em app/ inteiro, ver README.md) nao e reportada "
+        "automaticamente para o SonarQube Cloud sem esse passo extra de integracao.",
+    )
+
     _h2(pdf, "Cobertura por categoria do OWASP Top 10 (2021)")
     _paragrafo(
         pdf,
