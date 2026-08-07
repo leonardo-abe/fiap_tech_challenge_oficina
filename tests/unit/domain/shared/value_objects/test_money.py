@@ -17,6 +17,11 @@ def test_money_com_valor_negativo_levanta_erro():
         Money(valor=Decimal("-1"))
 
 
+def test_money_com_valor_nao_numerico_levanta_erro():
+    with pytest.raises(ValorMonetarioInvalidoError):
+        Money(valor="abc")
+
+
 def test_money_somar():
     resultado = Money(valor=Decimal("10.00")).somar(Money(valor=Decimal("5.50")))
 
