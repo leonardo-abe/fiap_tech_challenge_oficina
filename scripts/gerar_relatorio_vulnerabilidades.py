@@ -140,7 +140,8 @@ def gerar_relatorio_pdf(
     _bloco(pdf, f"Data: {data}", color=(90, 90, 90))
     _bloco(
         pdf,
-        f"Ferramentas: bandit {versao_bandit} (SAST) e pip-audit {versao_pip_audit} (SCA)",
+        f"Ferramentas: bandit {versao_bandit} (SAST), pip-audit {versao_pip_audit} (SCA) e "
+        "SonarQube Community Edition (SAST/hotspots, self-hosted)",
         color=(90, 90, 90),
     )
     _bloco(pdf, "Ambiente: Python 3.12.8", color=(90, 90, 90))
@@ -165,6 +166,32 @@ def gerar_relatorio_pdf(
         pdf, "Nenhuma vulnerabilidade conhecida nas dependencias instaladas (producao + dev)."
     )
 
+    _h3(pdf, "SAST - SonarQube (Security Rating por arquivo)")
+    _paragrafo(
+        pdf,
+        "Primeira rodada apontou Security Rating E em 3 arquivos e D em 1 (os demais 353 "
+        "componentes analisados ficaram em A). Cada um foi investigado individualmente:",
+    )
+    _paragrafo(
+        pdf,
+        "- Dockerfile (D): real - container rodava como root. Corrigido: usuario appuser "
+        "nao-root a partir do fim do build.\n"
+        "- docker-compose.yml (E): real, risco baixo - credenciais do Postgres hardcoded no "
+        "arquivo versionado. Corrigido: movidas para variavel de ambiente com fallback.\n"
+        "- autenticar_usuario.py (E): falso positivo - hash bcrypt fixo de proposito "
+        "(mitigacao de timing attack no login). Security Hotspot marcado Safe no SonarQube.\n"
+        "- settings.py (E): falso positivo / risco documentado - jwt_secret_key e "
+        "seed_admin_senha sao defaults de ambiente local, ja documentados no .env.example. "
+        "Security Hotspots marcados Safe no SonarQube.",
+    )
+    _paragrafo(
+        pdf,
+        "Diferenca em relacao a bandit/pip-audit: achados de credencial hardcoded do "
+        "SonarQube sao Security Hotspots, nao Issues - por design, exigem revisao humana "
+        "explicita (status Safe/Fixed/Acknowledged na propria interface) em vez de "
+        "supressao via comentario no codigo.",
+    )
+
     _h2(pdf, "Cobertura por categoria do OWASP Top 10 (2021)")
     _paragrafo(
         pdf,
@@ -182,7 +209,11 @@ def gerar_relatorio_pdf(
         pdf,
         "- app/shared/settings.py: default de jwt_secret_key alongado de 23 para 42 bytes "
         "(RFC 7518 par. 3.2), eliminando o InsecureKeyLengthWarning observado na suite de "
-        "testes.",
+        "testes.\n"
+        "- Dockerfile: container passou a rodar como usuario nao-root (appuser) a partir do "
+        "fim do build, em vez de root.\n"
+        "- docker-compose.yml / docker-compose.test.yml: credenciais do Postgres movidas de "
+        "literal hardcoded para variavel de ambiente com fallback.",
     )
 
     _h2(pdf, "Limitacoes desta analise")

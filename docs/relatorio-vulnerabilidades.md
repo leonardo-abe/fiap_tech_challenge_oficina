@@ -1,7 +1,7 @@
 # Relatório de Vulnerabilidades
 
 **Data:** 2026-08-07
-**Ferramentas:** [bandit](https://bandit.readthedocs.io/) 1.9.4 (SAST) · [pip-audit](https://pypi.org/project/pip-audit/) 2.10.1 (SCA)
+**Ferramentas:** [bandit](https://bandit.readthedocs.io/) 1.9.4 (SAST) · [pip-audit](https://pypi.org/project/pip-audit/) 2.10.1 (SCA) · [SonarQube](https://www.sonarsource.com/products/sonarqube/) Community Edition (SAST/hotspots, self-hosted)
 **Ambiente:** Python 3.12.8
 
 ## Como reproduzir
@@ -10,6 +10,9 @@
 uv run bandit -r app scripts
 uv run pip-audit
 ```
+
+SonarQube foi rodado localmente via Docker, com o repositório integrado diretamente
+(sem necessidade de CI, já que o projeto não usa pipeline).
 
 ## Resultados
 
@@ -29,6 +32,24 @@ No known vulnerabilities found
 ```
 
 Nenhuma vulnerabilidade conhecida nas dependências instaladas (produção + dev).
+
+### SAST — SonarQube (Security Rating por arquivo)
+
+A primeira rodada apontou Security Rating `E` em 3 arquivos e `D` em 1 (os demais 353
+componentes analisados ficaram em `A`). Cada um foi investigado individualmente:
+
+| Arquivo | Rating inicial | Natureza | Ação |
+|---|---|---|---|
+| `Dockerfile` | D | Real: container rodava como root (sem `USER`) | **Corrigido** - usuário `appuser` não-root criado e usado a partir do fim do build |
+| `docker-compose.yml` | E | Real, risco baixo: credenciais do Postgres hardcoded no arquivo versionado | **Corrigido** - movidas para variáveis de ambiente (`${POSTGRES_USER:-oficina}` etc.), com fallback para não quebrar o `docker-compose up` de quem não criou um `.env` |
+| `app/application/usuario/use_cases/autenticar_usuario.py` | E | Falso positivo: `_HASH_SEM_CORRESPONDENCIA` é um hash bcrypt fixo *de propósito* (mitigação de timing attack no login, nunca corresponde a senha real) | Security Hotspot marcado como **Safe** no SonarQube, com a justificativa acima |
+| `app/shared/settings.py` | E | Falso positivo / risco documentado: `jwt_secret_key` e `seed_admin_senha` são *defaults* de ambiente local, já documentados no `.env.example` como "troque em produção" | Security Hotspots marcados como **Safe** no SonarQube, com a mesma justificativa |
+
+Diferença importante em relação a bandit/pip-audit: os achados de credencial hardcoded do
+SonarQube são **Security Hotspots**, não "Issues" - por design, o SonarQube exige revisão
+humana explícita (status Safe/Fixed/Acknowledged na própria interface) em vez de permitir
+suprimir via comentário no código. Isso é intencional: força alguém a efetivamente olhar
+cada caso antes de descartá-lo.
 
 ## Cobertura por categoria do OWASP Top 10 (2021)
 
@@ -52,6 +73,8 @@ resultado "limpo" acima, e também onde ficam registradas as lacunas conhecidas.
 ## Achados corrigidos nesta rodada
 
 - `app/shared/settings.py`: *default* de `jwt_secret_key` alongado de 23 para 42 bytes (RFC 7518 §3.2), eliminando o `InsecureKeyLengthWarning` observado na suíte de testes.
+- `Dockerfile`: container passou a rodar como usuário não-root (`appuser`) a partir do fim do build, em vez de root.
+- `docker-compose.yml` / `docker-compose.test.yml`: credenciais do Postgres movidas de literal hardcoded para variável de ambiente com fallback (`${POSTGRES_USER:-oficina}` etc.).
 
 ## Limitações desta análise
 
