@@ -8,7 +8,7 @@ uv run pytest                    # unitários (domain + application) - não prec
 ```
 
 Os testes de integração (`tests/integration/`) sobem contra um Postgres efêmero, separado do
-banco de desenvolvimento (porta 5433). Suba o container antes de rodá-los:
+banco de desenvolvimento (porta 5433). Suba o container antes de rodá-los: 
 
 ```bash
 docker compose -f docker-compose.test.yml up -d
