@@ -5,6 +5,7 @@ from app.application.ordem_servico.dtos import (
 )
 from app.application.ordem_servico.use_cases import (
     BuscarOrdemServicoUseCase,
+    CalcularTempoMedioExecucaoUseCase,
     ConsultarStatusOrdemServicoUseCase,
     CriarOrdemServicoUseCase,
     ListarOrdensServicoUseCase,
@@ -15,6 +16,7 @@ from app.presentation.api.v1.ordens_servico.schemas import (
     OrdemServicoCreateSchema,
     OrdemServicoSchema,
     OrdemServicoStatusSchema,
+    RelatorioTempoMedioExecucaoSchema,
 )
 
 
@@ -26,12 +28,14 @@ class OrdemServicoController:
         listar_use_case: ListarOrdensServicoUseCase,
         buscar_use_case: BuscarOrdemServicoUseCase,
         consultar_status_use_case: ConsultarStatusOrdemServicoUseCase,
+        calcular_tempo_medio_execucao_use_case: CalcularTempoMedioExecucaoUseCase,
     ) -> None:
         self._criar_use_case = criar_use_case
         self._mudar_status_use_case = mudar_status_use_case
         self._listar_use_case = listar_use_case
         self._buscar_use_case = buscar_use_case
         self._consultar_status_use_case = consultar_status_use_case
+        self._calcular_tempo_medio_execucao_use_case = calcular_tempo_medio_execucao_use_case
 
     async def criar(self, dados: OrdemServicoCreateSchema) -> OrdemServicoSchema:
         resultado = await self._criar_use_case.executar(
@@ -85,3 +89,7 @@ class OrdemServicoController:
     async def consultar_status(self, ordem_id: int, documento: str) -> OrdemServicoStatusSchema:
         resultado = await self._consultar_status_use_case.executar(ordem_id, documento)
         return OrdemServicoStatusSchema.model_validate(resultado)
+
+    async def relatorio_tempo_medio_execucao(self) -> RelatorioTempoMedioExecucaoSchema:
+        resultado = await self._calcular_tempo_medio_execucao_use_case.executar()
+        return RelatorioTempoMedioExecucaoSchema.model_validate(resultado)

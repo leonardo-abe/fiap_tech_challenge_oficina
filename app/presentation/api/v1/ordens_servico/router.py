@@ -8,6 +8,7 @@ from app.presentation.api.v1.ordens_servico.schemas import (
     OrdemServicoCreateSchema,
     OrdemServicoSchema,
     OrdemServicoStatusSchema,
+    RelatorioTempoMedioExecucaoSchema,
 )
 
 router = APIRouter(prefix="/api/v1/ordens-servico", tags=["ordens-servico"])
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/v1/ordens-servico", tags=["ordens-servico"])
 _admin_atendente = Depends(require_roles(Perfil.ADMIN, Perfil.ATENDENTE))
 _admin_mecanico = Depends(require_roles(Perfil.ADMIN, Perfil.MECANICO))
 _qualquer_perfil = Depends(require_roles(Perfil.ADMIN, Perfil.ATENDENTE, Perfil.MECANICO))
+_apenas_admin = Depends(require_roles(Perfil.ADMIN))
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, dependencies=[_admin_atendente])
@@ -91,6 +93,13 @@ async def listar_ordens_servico(
     controller: OrdemServicoController = Depends(get_ordem_servico_controller),
 ) -> list[OrdemServicoSchema]:
     return await controller.listar()
+
+
+@router.get("/relatorios/tempo-medio-execucao", dependencies=[_apenas_admin])
+async def relatorio_tempo_medio_execucao(
+    controller: OrdemServicoController = Depends(get_ordem_servico_controller),
+) -> RelatorioTempoMedioExecucaoSchema:
+    return await controller.relatorio_tempo_medio_execucao()
 
 
 @router.get("/{ordem_id}", dependencies=[_qualquer_perfil])

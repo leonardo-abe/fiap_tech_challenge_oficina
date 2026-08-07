@@ -67,3 +67,10 @@ class OrdemServicoStatusSchema(BaseModel):
     recebida_em: datetime
     execucao_iniciada_em: datetime | None
     finalizada_em: datetime | None
+
+
+class RelatorioTempoMedioExecucaoSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    quantidade_ordens_finalizadas: int
+    tempo_medio_execucao_horas: float | None
