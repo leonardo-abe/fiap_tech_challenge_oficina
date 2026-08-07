@@ -1,7 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.application.ordem_servico.use_cases import CriarOrdemServicoUseCase
+from app.application.ordem_servico.use_cases import (
+    CriarOrdemServicoUseCase,
+    MudarStatusOrdemServicoUseCase,
+)
 from app.infrastructure.db.session import get_session
 from app.infrastructure.persistence.cliente.repository import SQLAlchemyClienteRepository
 from app.infrastructure.persistence.ordem_servico.repository import (
@@ -41,7 +44,20 @@ def get_criar_ordem_servico_use_case(
     )
 
 
+def get_mudar_status_ordem_servico_use_case(
+    ordem_servico_repository: SQLAlchemyOrdemServicoRepository = Depends(
+        get_ordem_servico_repository
+    ),
+) -> MudarStatusOrdemServicoUseCase:
+    return MudarStatusOrdemServicoUseCase(ordem_servico_repository=ordem_servico_repository)
+
+
 def get_ordem_servico_controller(
     criar_use_case: CriarOrdemServicoUseCase = Depends(get_criar_ordem_servico_use_case),
+    mudar_status_use_case: MudarStatusOrdemServicoUseCase = Depends(
+        get_mudar_status_ordem_servico_use_case
+    ),
 ) -> OrdemServicoController:
-    return OrdemServicoController(criar_use_case=criar_use_case)
+    return OrdemServicoController(
+        criar_use_case=criar_use_case, mudar_status_use_case=mudar_status_use_case
+    )
