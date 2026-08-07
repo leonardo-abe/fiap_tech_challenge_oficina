@@ -26,4 +26,7 @@ uv run pip-audit               # CVEs conhecidas nas dependências
 ```
 
 Resultado mais recente e cobertura por categoria do OWASP Top 10 em
-[docs/relatorio-vulnerabilidades.md](docs/relatorio-vulnerabilidades.md).
+[docs/relatorio-vulnerabilidades.md](docs/relatorio-vulnerabilidades.md) (e a mesma versão em
+PDF, para entrega, em [docs/relatorio-vulnerabilidades.pdf](docs/relatorio-vulnerabilidades.pdf)
+- regenerar com `uv run python scripts/gerar_relatorio_vulnerabilidades.py` após rodar os scans
+de novo).
