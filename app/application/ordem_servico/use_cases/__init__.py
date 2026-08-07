@@ -1,4 +1,7 @@
 from app.application.ordem_servico.use_cases.buscar_ordem_servico import BuscarOrdemServicoUseCase
+from app.application.ordem_servico.use_cases.calcular_tempo_medio_execucao import (
+    CalcularTempoMedioExecucaoUseCase,
+)
 from app.application.ordem_servico.use_cases.consultar_status_ordem_servico import (
     ConsultarStatusOrdemServicoUseCase,
 )
@@ -12,6 +15,7 @@ from app.application.ordem_servico.use_cases.mudar_status_ordem_servico import (
 
 __all__ = [
     "BuscarOrdemServicoUseCase",
+    "CalcularTempoMedioExecucaoUseCase",
     "ConsultarStatusOrdemServicoUseCase",
     "CriarOrdemServicoUseCase",
     "ListarOrdensServicoUseCase",
