@@ -36,6 +36,10 @@ select = ["E", "F", "I", "UP", "B", "S"]
 # Depends()/Query() em argumento default são o padrão idiomático de DI do FastAPI.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body"]
 
+[tool.ruff.lint.per-file-ignores]
+# assert é a forma idiomática de asserção do pytest, não um risco de segurança aqui.
+"tests/**" = ["S101"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
