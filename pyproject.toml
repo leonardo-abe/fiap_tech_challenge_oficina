@@ -43,4 +43,8 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# testes de integração compartilham um engine/conexão asyncpg entre fixture e teste - ambos
+# precisam rodar no mesmo event loop, daí o escopo de sessão para os dois.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
