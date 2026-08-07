@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "postgresql+asyncpg://oficina:oficina@localhost:5432/oficina"
 
-    jwt_secret_key: str = "change-me-in-production"  # noqa: S105 - placeholder, sobrescrito por env var
+    # placeholder, sempre sobrescrito por env var em produção - mas com >=32 bytes mesmo
+    # assim, para não cair abaixo do mínimo recomendado (RFC 7518 §3.2) para HS256 caso
+    # alguém esqueça de configurar a variável de ambiente.
+    jwt_secret_key: str = "change-me-in-production-please-set-env-var"  # noqa: S105
     jwt_expiracao_minutos: int = 60
 
     seed_admin_email: str = "admin@oficina.com.br"
