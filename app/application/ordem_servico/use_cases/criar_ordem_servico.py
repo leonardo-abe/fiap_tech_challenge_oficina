@@ -59,15 +59,25 @@ class CriarOrdemServicoUseCase:
             # OrdemServico nunca muta o agregado Peca diretamente. Toda a request
             # compartilha a mesma sessão (Unit of Work), então se qualquer item
             # subsequente falhar, esta baixa é revertida junto com o resto.
+            #
+            # peca.baixar_estoque(...) é só uma pré-checagem otimista (valida quantidade > 0
+            # e dá um erro rápido se já sabemos, pela leitura acima, que não há estoque).
+            # A baixa real é o UPDATE atômico condicional de decrementar_estoque, que é
+            # a fonte da verdade sob concorrência - duas requisições decrementando a mesma
+            # peça simultaneamente não sofrem lost update, e a segunda falha com
+            # EstoqueInsuficienteError se, entre a leitura e a escrita, a primeira já tiver
+            # consumido o estoque necessário.
             peca.baixar_estoque(item_entrada.quantidade)
-            await self._peca_repository.atualizar(peca)
+            peca_atualizada = await self._peca_repository.decrementar_estoque(
+                peca.id, item_entrada.quantidade
+            )
 
             ordem.adicionar_item_peca(
                 ItemPeca(
-                    peca_id=peca.id,
-                    nome=peca.nome,
+                    peca_id=peca_atualizada.id,
+                    nome=peca_atualizada.nome,
                     quantidade=item_entrada.quantidade,
-                    valor_unitario=peca.preco,
+                    valor_unitario=peca_atualizada.preco,
                 )
             )
 

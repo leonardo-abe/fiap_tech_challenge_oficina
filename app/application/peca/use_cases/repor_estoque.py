@@ -12,8 +12,8 @@ class ReporEstoqueUseCase:
         if peca is None:
             raise PecaNaoEncontradaError(peca_id)
 
-        peca.repor_estoque(entrada.quantidade)
-        atualizada = await self._peca_repository.atualizar(peca)
+        peca.repor_estoque(entrada.quantidade)  # valida quantidade > 0
+        atualizada = await self._peca_repository.incrementar_estoque(peca_id, entrada.quantidade)
 
         return PecaOutput(
             id=atualizada.id,
