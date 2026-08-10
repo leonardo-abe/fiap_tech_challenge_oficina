@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from validate_docbr import CNPJ, CPF
 
@@ -7,7 +7,7 @@ from app.domain.cliente.exceptions.documento_invalido import DocumentoInvalidoEr
 
 @dataclass(frozen=True)
 class Documento:
-    valor: str
+    valor: str = field(repr=False)  # CPF/CNPJ é PII - nunca deve aparecer em log/stack trace
 
     def __post_init__(self) -> None:
         numeros = "".join(filter(str.isdigit, self.valor))

@@ -31,3 +31,10 @@ def test_documento_cnpj_valido_normaliza_para_digitos():
 def test_documento_invalido_levanta_erro(valor_invalido):
     with pytest.raises(DocumentoInvalidoError):
         Documento(valor=valor_invalido)
+
+
+def test_repr_do_documento_nao_expoe_o_cpf():
+    # ID-006: CPF/CNPJ é PII e não pode aparecer em log/stack trace via repr() acidental.
+    documento = Documento(valor="11144477735")
+
+    assert "11144477735" not in repr(documento)
