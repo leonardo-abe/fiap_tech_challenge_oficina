@@ -234,3 +234,17 @@ async def test_relatorio_tempo_medio_execucao_apenas_admin(client):
     assert resposta_admin.status_code == 200
     assert resposta_admin.json()["quantidade_ordens_finalizadas"] == 0
     assert resposta_atendente.status_code == 403
+
+
+async def test_consulta_publica_de_status_com_muitas_tentativas_retorna_429(client):
+    # ID-005: sem rate limiting, a rota pública de status podia ser varrida
+    # sequencialmente por ordem_id sem limite. Limite configurado é 20/minuto por IP.
+    respostas = [
+        await client.get(
+            "/api/v1/ordens-servico/999/status", params={"documento": "11144477735"}
+        )
+        for _ in range(21)
+    ]
+
+    assert [r.status_code for r in respostas[:20]] == [404] * 20
+    assert respostas[20].status_code == 429

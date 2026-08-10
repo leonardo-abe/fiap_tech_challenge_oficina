@@ -5,6 +5,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.infrastructure.db.session import get_session
+from app.infrastructure.security.rate_limiter import limiter
 from app.main import app
 
 from ..conftest import truncate_all_tables
@@ -12,6 +13,11 @@ from ..conftest import truncate_all_tables
 
 @pytest.fixture
 async def client(engine) -> AsyncGenerator[AsyncClient, None]:
+    # o ASGITransport não passa por uma conexão TCP real, então get_remote_address
+    # devolve o mesmo "IP" para todos os testes - sem resetar, as chamadas de um teste
+    # contam para o limite do próximo e a suíte começa a receber 429 de "vizinhos".
+    limiter.reset()
+
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async def _get_test_session() -> AsyncGenerator[AsyncSession, None]:

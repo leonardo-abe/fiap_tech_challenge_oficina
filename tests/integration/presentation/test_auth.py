@@ -49,3 +49,14 @@ async def test_rota_protegida_com_token_malformado_retorna_401(client):
     )
 
     assert resposta.status_code == 401
+
+
+async def test_login_com_muitas_tentativas_retorna_429(client):
+    # ID-005: sem rate limiting, /auth/login podia ser atacado por força bruta sem
+    # nenhum lockout. Limite configurado é 10/minuto por IP.
+    dados = {"email": "ninguem@x.com", "senha": "qualquer"}
+
+    respostas = [await client.post("/api/v1/auth/login", json=dados) for _ in range(11)]
+
+    assert [r.status_code for r in respostas[:10]] == [401] * 10
+    assert respostas[10].status_code == 429
