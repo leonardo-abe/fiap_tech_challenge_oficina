@@ -3,31 +3,31 @@ import pytest
 from app.shared.settings import Settings
 
 
-def test_settings_local_permite_placeholders():
-    config = Settings(environment="local")
+def test_jwt_secret_key_e_obrigatoria_mesmo_em_local(monkeypatch):
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
 
-    assert config.jwt_secret_key == "change-me-in-production-please-set-env-var"
-    assert config.seed_admin_senha == "admin123"
-
-
-def test_settings_fora_de_local_com_jwt_secret_key_placeholder_levanta_erro():
-    with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
-        Settings(environment="production", seed_admin_senha="uma-senha-forte-qualquer")
+    with pytest.raises(ValueError, match="jwt_secret_key"):
+        Settings(_env_file=None, environment="local", seed_admin_senha="qualquer-coisa")
 
 
-def test_settings_fora_de_local_com_seed_admin_senha_placeholder_levanta_erro():
-    with pytest.raises(ValueError, match="SEED_ADMIN_SENHA"):
+def test_seed_admin_senha_e_obrigatoria_mesmo_em_local(monkeypatch):
+    monkeypatch.delenv("SEED_ADMIN_SENHA", raising=False)
+
+    with pytest.raises(ValueError, match="seed_admin_senha"):
         Settings(
-            environment="production",
+            _env_file=None,
+            environment="local",
             jwt_secret_key="uma-chave-bem-longa-e-aleatoria-1234567890",
         )
 
 
-def test_settings_fora_de_local_com_segredos_customizados_nao_levanta_erro():
+def test_settings_com_segredos_explicitos_funciona_em_qualquer_ambiente():
     config = Settings(
+        _env_file=None,
         environment="production",
         jwt_secret_key="uma-chave-bem-longa-e-aleatoria-1234567890",
         seed_admin_senha="uma-senha-forte-qualquer",
     )
 
     assert config.environment == "production"
+    assert config.jwt_secret_key == "uma-chave-bem-longa-e-aleatoria-1234567890"
