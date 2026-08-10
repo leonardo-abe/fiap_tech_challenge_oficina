@@ -41,8 +41,9 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 
 [tool.ruff.lint.per-file-ignores]
 # assert é a forma idiomática de asserção do pytest, não um risco de segurança aqui;
-# S105 dispara em falso positivo para tokens/hashes de teste fixos e conhecidos.
-"tests/**" = ["S101", "S105"]
+# S105/S106 disparam em falso positivo para tokens/hashes/senhas de teste fixos e
+# conhecidos, usados de propósito para exercitar código de autenticação/segredo.
+"tests/**" = ["S101", "S105", "S106"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
