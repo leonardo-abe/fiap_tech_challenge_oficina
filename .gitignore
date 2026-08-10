@@ -26,3 +26,5 @@ coverage.xml
 
 # Material do desafio (não faz parte do código-fonte entregável)
 /*.pdf
+
+AUDITORIA_ARQUITETURA.md
