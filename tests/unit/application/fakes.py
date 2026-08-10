@@ -1,6 +1,9 @@
+from dataclasses import replace
+
 from app.domain.cliente.entities import Cliente
 from app.domain.ordem_servico.entities import OrdemServico
 from app.domain.peca.entities import Peca
+from app.domain.peca.exceptions import PecaNaoEncontradaError
 from app.domain.servico.entities import Servico
 from app.domain.usuario.entities import Usuario
 from app.domain.usuario.value_objects import Perfil
@@ -103,13 +106,32 @@ class FakePecaRepository:
         return peca
 
     async def buscar_por_id(self, peca_id: int) -> Peca | None:
-        return self._pecas.get(peca_id)
+        # cópia, não a referência viva do dict - decrementar_estoque/incrementar_estoque
+        # simulam um UPDATE atômico direto no "banco", independente de qualquer mutação
+        # em memória que o chamador tenha feito na entidade lida (mesma semântica do
+        # repositório real, onde ler não afeta o que está persistido até uma escrita).
+        peca = self._pecas.get(peca_id)
+        return replace(peca) if peca is not None else None
 
     async def listar(self) -> list[Peca]:
         return list(self._pecas.values())
 
     async def atualizar(self, peca: Peca) -> Peca:
         self._pecas[peca.id] = peca
+        return peca
+
+    async def decrementar_estoque(self, peca_id: int, quantidade: int) -> Peca:
+        peca = self._pecas.get(peca_id)
+        if peca is None:
+            raise PecaNaoEncontradaError(peca_id)
+        peca.baixar_estoque(quantidade)
+        return peca
+
+    async def incrementar_estoque(self, peca_id: int, quantidade: int) -> Peca:
+        peca = self._pecas.get(peca_id)
+        if peca is None:
+            raise PecaNaoEncontradaError(peca_id)
+        peca.repor_estoque(quantidade)
         return peca
 
     async def remover(self, peca_id: int) -> None:
