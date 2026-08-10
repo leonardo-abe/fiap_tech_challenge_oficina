@@ -208,11 +208,18 @@ async def test_consulta_publica_de_status(client):
     inexistente = await client.get(
         "/api/v1/ordens-servico/999/status", params={"documento": "11144477735"}
     )
+    # ID-004: documento mal formado não pode virar 422 - precisa ser 404 igual a um
+    # ordem_id inexistente, senão um atacante distingue "OS existe" de "OS não existe"
+    # sem precisar de nenhum documento válido.
+    malformado = await client.get(
+        f"/api/v1/ordens-servico/{ordem['id']}/status", params={"documento": "123"}
+    )
 
     assert correta.status_code == 200
     assert correta.json()["status"] == "RECEBIDA"
     assert errada.status_code == 404
     assert inexistente.status_code == 404
+    assert malformado.status_code == 404
 
 
 async def test_relatorio_tempo_medio_execucao_apenas_admin(client):

@@ -1,6 +1,7 @@
 from app.application.cliente.ports import ClienteRepositoryProtocol
 from app.application.ordem_servico.dtos import StatusOrdemServicoOutput
 from app.application.ordem_servico.ports import OrdemServicoRepositoryProtocol
+from app.domain.cliente.exceptions import DocumentoInvalidoError
 from app.domain.cliente.value_objects import Documento
 from app.domain.ordem_servico.exceptions import OrdemServicoNaoEncontradaError
 
@@ -21,9 +22,20 @@ class ConsultarStatusOrdemServicoUseCase:
 
         cliente = await self._cliente_repository.buscar_por_id(ordem.cliente_id)
 
-        # documento que não corresponde ao cliente da OS é tratado como "não encontrada" -
-        # a consulta pública não deve revelar a um estranho se aquele id de OS existe.
-        if cliente is None or cliente.documento != Documento(valor=documento):
+        # documento que não corresponde ao cliente da OS - incluindo um documento com
+        # formato/dígito verificador inválido - é tratado como "não encontrada" (404).
+        # A consulta pública não deve revelar a um estranho se aquele id de OS existe:
+        # deixar DocumentoInvalidoError propagar (422) diferenciaria "OS existe, documento
+        # mal formado" de "OS não existe" (404), o que por si só já vaza a existência da OS
+        # para quem tentar qualquer id sem precisar acertar um documento válido.
+        documento_confere = False
+        if cliente is not None:
+            try:
+                documento_confere = cliente.documento == Documento(valor=documento)
+            except DocumentoInvalidoError:
+                documento_confere = False
+
+        if not documento_confere:
             raise OrdemServicoNaoEncontradaError(ordem_id)
 
         return StatusOrdemServicoOutput(
