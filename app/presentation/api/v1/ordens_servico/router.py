@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.domain.usuario.value_objects import Perfil
+from app.infrastructure.security.rate_limiter import limiter
 from app.presentation.api.v1.auth.dependencies import require_roles
 from app.presentation.api.v1.ordens_servico.controller import OrdemServicoController
 from app.presentation.api.v1.ordens_servico.dependencies import get_ordem_servico_controller
@@ -111,7 +112,9 @@ async def buscar_ordem_servico(
 
 
 @router.get("/{ordem_id}/status")
+@limiter.limit("20/minute")
 async def consultar_status_ordem_servico(
+    request: Request,
     ordem_id: int,
     documento: str = Query(..., description="CPF ou CNPJ do cliente dono da OS"),
     controller: OrdemServicoController = Depends(get_ordem_servico_controller),
