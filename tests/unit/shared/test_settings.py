@@ -2,32 +2,30 @@ import pytest
 
 from app.shared.settings import Settings
 
-
-def test_jwt_secret_key_e_obrigatoria_mesmo_em_local(monkeypatch):
-    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
-
-    with pytest.raises(ValueError, match="jwt_secret_key"):
-        Settings(_env_file=None, environment="local", seed_admin_senha="qualquer-coisa")
-
-
-def test_seed_admin_senha_e_obrigatoria_mesmo_em_local(monkeypatch):
-    monkeypatch.delenv("SEED_ADMIN_SENHA", raising=False)
-
-    with pytest.raises(ValueError, match="seed_admin_senha"):
-        Settings(
-            _env_file=None,
-            environment="local",
-            jwt_secret_key="uma-chave-bem-longa-e-aleatoria-1234567890",
-        )
+_CAMPOS_VALIDOS = {
+    "app_name": "Oficina Mecânica API",
+    "environment": "local",
+    "database_url": "postgresql+asyncpg://oficina:oficina@localhost:5432/oficina",
+    "jwt_secret_key": "uma-chave-bem-longa-e-aleatoria-1234567890",
+    "jwt_expiracao_minutos": 60,
+    "seed_admin_email": "admin@oficina.com.br",
+    "seed_admin_senha": "uma-senha-forte-qualquer",
+}
 
 
-def test_settings_com_segredos_explicitos_funciona_em_qualquer_ambiente():
-    config = Settings(
-        _env_file=None,
-        environment="production",
-        jwt_secret_key="uma-chave-bem-longa-e-aleatoria-1234567890",
-        seed_admin_senha="uma-senha-forte-qualquer",
-    )
+@pytest.mark.parametrize("campo", sorted(_CAMPOS_VALIDOS))
+def test_campo_e_obrigatorio(campo, monkeypatch):
+    # nenhum campo tem default - tudo precisa vir de env var/.env, sempre, inclusive
+    # valores que não são segredo (nome do app, URL do banco etc.), por decisão do time.
+    monkeypatch.delenv(campo.upper(), raising=False)
+    campos = {chave: valor for chave, valor in _CAMPOS_VALIDOS.items() if chave != campo}
 
-    assert config.environment == "production"
+    with pytest.raises(ValueError, match=campo):
+        Settings(_env_file=None, **campos)
+
+
+def test_settings_com_todos_os_campos_informados_funciona():
+    config = Settings(_env_file=None, **_CAMPOS_VALIDOS)
+
+    assert config.environment == "local"
     assert config.jwt_secret_key == "uma-chave-bem-longa-e-aleatoria-1234567890"
