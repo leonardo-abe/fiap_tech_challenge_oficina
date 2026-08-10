@@ -8,3 +8,5 @@ __pycache__/
 htmlcov/
 .env
 *.pdf
+# ferramentas de documentação/relatório - não fazem parte da aplicação em runtime
+tools/
