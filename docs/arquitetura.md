@@ -84,8 +84,3 @@ O mesmo padrão se repete para persistência (`*RepositoryProtocol` → reposit�
 SQLAlchemy), hash de senha (`PasswordHasherProtocol` → `BcryptPasswordHasher`) e emissão
 de token (`TokenProviderProtocol` → `JWTTokenProvider`) — nenhum caso de uso importa uma
 biblioteca concreta, só o `Protocol`.
-
-## Histórico de achados e correções
-
-Auditoria completa de arquitetura, SOLID e segurança (com achados já corrigidos e
-pendentes) em [AUDITORIA_ARQUITETURA.md](../AUDITORIA_ARQUITETURA.md).

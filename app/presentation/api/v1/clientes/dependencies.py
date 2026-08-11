@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.cliente.use_cases import (
     AtualizarClienteUseCase,
+    BuscarClientePorDocumentoUseCase,
     BuscarClienteUseCase,
     CriarClienteUseCase,
     ListarClientesUseCase,
@@ -37,6 +38,12 @@ def get_buscar_cliente_use_case(
     return BuscarClienteUseCase(cliente_repository=cliente_repository)
 
 
+def get_buscar_cliente_por_documento_use_case(
+    cliente_repository: SQLAlchemyClienteRepository = Depends(get_cliente_repository),
+) -> BuscarClientePorDocumentoUseCase:
+    return BuscarClientePorDocumentoUseCase(cliente_repository=cliente_repository)
+
+
 def get_listar_clientes_use_case(
     cliente_repository: SQLAlchemyClienteRepository = Depends(get_cliente_repository),
 ) -> ListarClientesUseCase:
@@ -53,6 +60,9 @@ def get_cliente_controller(
     criar_use_case: CriarClienteUseCase = Depends(get_criar_cliente_use_case),
     atualizar_use_case: AtualizarClienteUseCase = Depends(get_atualizar_cliente_use_case),
     buscar_use_case: BuscarClienteUseCase = Depends(get_buscar_cliente_use_case),
+    buscar_por_documento_use_case: BuscarClientePorDocumentoUseCase = Depends(
+        get_buscar_cliente_por_documento_use_case
+    ),
     listar_use_case: ListarClientesUseCase = Depends(get_listar_clientes_use_case),
     remover_use_case: RemoverClienteUseCase = Depends(get_remover_cliente_use_case),
 ) -> ClienteController:
@@ -60,6 +70,7 @@ def get_cliente_controller(
         criar_use_case=criar_use_case,
         atualizar_use_case=atualizar_use_case,
         buscar_use_case=buscar_use_case,
+        buscar_por_documento_use_case=buscar_por_documento_use_case,
         listar_use_case=listar_use_case,
         remover_use_case=remover_use_case,
     )

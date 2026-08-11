@@ -6,8 +6,12 @@ class ListarVeiculosUseCase:
     def __init__(self, veiculo_repository: VeiculoRepositoryProtocol) -> None:
         self._veiculo_repository = veiculo_repository
 
-    async def executar(self, cliente_id: int | None = None) -> list[VeiculoOutput]:
-        veiculos = await self._veiculo_repository.listar(cliente_id=cliente_id)
+    async def executar(
+        self, cliente_id: int | None = None, limit: int = 50, offset: int = 0
+    ) -> list[VeiculoOutput]:
+        veiculos = await self._veiculo_repository.listar(
+            cliente_id=cliente_id, limit=limit, offset=offset
+        )
 
         return [
             VeiculoOutput(

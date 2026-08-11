@@ -28,9 +28,19 @@ async def criar_veiculo(
 @router.get("/")
 async def listar_veiculos(
     cliente_id: int | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     controller: VeiculoController = Depends(get_veiculo_controller),
 ) -> list[VeiculoSchema]:
-    return await controller.listar(cliente_id=cliente_id)
+    return await controller.listar(cliente_id=cliente_id, limit=limit, offset=offset)
+
+
+@router.get("/placa/{placa}")
+async def buscar_veiculo_por_placa(
+    placa: str,
+    controller: VeiculoController = Depends(get_veiculo_controller),
+) -> VeiculoSchema:
+    return await controller.buscar_por_placa(placa)
 
 
 @router.get("/{veiculo_id}")

@@ -26,14 +26,23 @@ class SQLAlchemyClienteRepository:
         model = await self._session.get(ClienteModel, cliente_id)
         return self._to_entity(model) if model else None
 
+    async def buscar_por_documento(self, documento: str) -> Cliente | None:
+        resultado = await self._session.execute(
+            select(ClienteModel).where(ClienteModel.documento == documento)
+        )
+        model = resultado.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
     async def existe_com_documento(self, documento: str) -> bool:
         resultado = await self._session.execute(
             select(ClienteModel.id).where(ClienteModel.documento == documento)
         )
         return resultado.scalar_one_or_none() is not None
 
-    async def listar(self) -> list[Cliente]:
-        resultado = await self._session.execute(select(ClienteModel).order_by(ClienteModel.nome))
+    async def listar(self, limit: int = 50, offset: int = 0) -> list[Cliente]:
+        resultado = await self._session.execute(
+            select(ClienteModel).order_by(ClienteModel.nome).limit(limit).offset(offset)
+        )
         return [self._to_entity(model) for model in resultado.scalars().all()]
 
     async def atualizar(self, cliente: Cliente) -> Cliente:

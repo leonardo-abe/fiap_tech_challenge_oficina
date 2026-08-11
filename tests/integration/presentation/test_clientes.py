@@ -73,6 +73,49 @@ async def test_buscar_cliente_inexistente_retorna_404(client):
     assert resposta.status_code == 404
 
 
+async def test_buscar_cliente_por_documento(client):
+    await client.post("/api/v1/clientes/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))
+
+    resposta = await client.get(
+        "/api/v1/clientes/documento/11144477735", headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.json()["nome"] == "Maria Silva"
+
+
+async def test_buscar_cliente_por_documento_inexistente_retorna_404(client):
+    resposta = await client.get(
+        "/api/v1/clientes/documento/52998224725", headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 404
+
+
+async def test_buscar_cliente_por_documento_invalido_retorna_422(client):
+    resposta = await client.get(
+        "/api/v1/clientes/documento/123", headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 422
+
+
+async def test_listar_clientes_respeita_limit(client):
+    await client.post("/api/v1/clientes/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))
+    await client.post(
+        "/api/v1/clientes/",
+        json={**_DADOS, "documento": "52998224725", "email": "j@x.com"},
+        headers=auth_headers(Perfil.ADMIN),
+    )
+
+    resposta = await client.get(
+        "/api/v1/clientes/", params={"limit": 1}, headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
+
+
 async def test_atualizar_cliente(client):
     criado = (
         await client.post("/api/v1/clientes/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))

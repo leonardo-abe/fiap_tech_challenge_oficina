@@ -6,8 +6,10 @@ class ListarPecasUseCase:
     def __init__(self, peca_repository: PecaRepositoryProtocol) -> None:
         self._peca_repository = peca_repository
 
-    async def executar(self) -> list[PecaOutput]:
-        pecas = await self._peca_repository.listar()
+    async def executar(
+        self, nome: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[PecaOutput]:
+        pecas = await self._peca_repository.listar(nome=nome, limit=limit, offset=offset)
 
         return [
             PecaOutput(

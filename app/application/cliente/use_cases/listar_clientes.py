@@ -6,8 +6,8 @@ class ListarClientesUseCase:
     def __init__(self, cliente_repository: ClienteRepositoryProtocol) -> None:
         self._cliente_repository = cliente_repository
 
-    async def executar(self) -> list[ClienteOutput]:
-        clientes = await self._cliente_repository.listar()
+    async def executar(self, limit: int = 50, offset: int = 0) -> list[ClienteOutput]:
+        clientes = await self._cliente_repository.listar(limit=limit, offset=offset)
 
         return [
             ClienteOutput(

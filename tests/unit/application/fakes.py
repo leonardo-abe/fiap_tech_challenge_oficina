@@ -24,11 +24,16 @@ class FakeClienteRepository:
     async def buscar_por_id(self, cliente_id: int) -> Cliente | None:
         return self._clientes.get(cliente_id)
 
+    async def buscar_por_documento(self, documento: str) -> Cliente | None:
+        return next(
+            (c for c in self._clientes.values() if c.documento.valor == documento), None
+        )
+
     async def existe_com_documento(self, documento: str) -> bool:
         return any(cliente.documento.valor == documento for cliente in self._clientes.values())
 
-    async def listar(self) -> list[Cliente]:
-        return list(self._clientes.values())
+    async def listar(self, limit: int = 50, offset: int = 0) -> list[Cliente]:
+        return list(self._clientes.values())[offset : offset + limit]
 
     async def atualizar(self, cliente: Cliente) -> Cliente:
         self._clientes[cliente.id] = cliente
@@ -52,14 +57,19 @@ class FakeVeiculoRepository:
     async def buscar_por_id(self, veiculo_id: int) -> Veiculo | None:
         return self._veiculos.get(veiculo_id)
 
+    async def buscar_por_placa(self, placa: str) -> Veiculo | None:
+        return next((v for v in self._veiculos.values() if v.placa.valor == placa), None)
+
     async def existe_com_placa(self, placa: str) -> bool:
         return any(veiculo.placa.valor == placa for veiculo in self._veiculos.values())
 
-    async def listar(self, cliente_id: int | None = None) -> list[Veiculo]:
+    async def listar(
+        self, cliente_id: int | None = None, limit: int = 50, offset: int = 0
+    ) -> list[Veiculo]:
         veiculos = list(self._veiculos.values())
-        if cliente_id is None:
-            return veiculos
-        return [veiculo for veiculo in veiculos if veiculo.cliente_id == cliente_id]
+        if cliente_id is not None:
+            veiculos = [v for v in veiculos if v.cliente_id == cliente_id]
+        return veiculos[offset : offset + limit]
 
     async def atualizar(self, veiculo: Veiculo) -> Veiculo:
         self._veiculos[veiculo.id] = veiculo
@@ -83,8 +93,13 @@ class FakeServicoRepository:
     async def buscar_por_id(self, servico_id: int) -> Servico | None:
         return self._servicos.get(servico_id)
 
-    async def listar(self) -> list[Servico]:
-        return list(self._servicos.values())
+    async def listar(
+        self, nome: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[Servico]:
+        servicos = list(self._servicos.values())
+        if nome is not None:
+            servicos = [s for s in servicos if nome.lower() in s.nome.lower()]
+        return servicos[offset : offset + limit]
 
     async def atualizar(self, servico: Servico) -> Servico:
         self._servicos[servico.id] = servico
@@ -113,8 +128,13 @@ class FakePecaRepository:
         peca = self._pecas.get(peca_id)
         return replace(peca) if peca is not None else None
 
-    async def listar(self) -> list[Peca]:
-        return list(self._pecas.values())
+    async def listar(
+        self, nome: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[Peca]:
+        pecas = list(self._pecas.values())
+        if nome is not None:
+            pecas = [p for p in pecas if nome.lower() in p.nome.lower()]
+        return pecas[offset : offset + limit]
 
     async def atualizar(self, peca: Peca) -> Peca:
         self._pecas[peca.id] = peca
@@ -152,8 +172,8 @@ class FakeOrdemServicoRepository:
     async def buscar_por_id(self, ordem_id: int) -> OrdemServico | None:
         return self._ordens.get(ordem_id)
 
-    async def listar(self) -> list[OrdemServico]:
-        return list(self._ordens.values())
+    async def listar(self, limit: int = 50, offset: int = 0) -> list[OrdemServico]:
+        return list(self._ordens.values())[offset : offset + limit]
 
     async def atualizar(self, ordem: OrdemServico) -> OrdemServico:
         self._ordens[ordem.id] = ordem

@@ -27,8 +27,12 @@ class SQLAlchemyPecaRepository:
         model = await self._session.get(PecaModel, peca_id)
         return self._to_entity(model) if model else None
 
-    async def listar(self) -> list[Peca]:
-        resultado = await self._session.execute(select(PecaModel).order_by(PecaModel.nome))
+    async def listar(self, nome: str | None = None, limit: int = 50, offset: int = 0) -> list[Peca]:
+        query = select(PecaModel).order_by(PecaModel.nome)
+        if nome is not None:
+            query = query.where(PecaModel.nome.ilike(f"%{nome}%"))
+        query = query.limit(limit).offset(offset)
+        resultado = await self._session.execute(query)
         return [self._to_entity(model) for model in resultado.scalars().all()]
 
     async def atualizar(self, peca: Peca) -> Peca:

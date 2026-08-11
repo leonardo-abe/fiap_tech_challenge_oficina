@@ -43,6 +43,39 @@ async def test_buscar_servico_inexistente_retorna_404(client):
     assert resposta.status_code == 404
 
 
+async def test_listar_servicos_filtra_por_nome(client):
+    await client.post("/api/v1/servicos/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))
+    await client.post(
+        "/api/v1/servicos/",
+        json={"nome": "Alinhamento", "descricao": "Alinhamento", "preco": "80.00"},
+        headers=auth_headers(Perfil.ADMIN),
+    )
+
+    resposta = await client.get(
+        "/api/v1/servicos/", params={"nome": "óleo"}, headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
+    assert resposta.json()[0]["nome"] == "Troca de óleo"
+
+
+async def test_listar_servicos_respeita_limit(client):
+    await client.post("/api/v1/servicos/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))
+    await client.post(
+        "/api/v1/servicos/",
+        json={"nome": "Alinhamento", "descricao": "Alinhamento", "preco": "80.00"},
+        headers=auth_headers(Perfil.ADMIN),
+    )
+
+    resposta = await client.get(
+        "/api/v1/servicos/", params={"limit": 1}, headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
+
+
 async def test_atualizar_e_remover_servico(client):
     criado = (
         await client.post("/api/v1/servicos/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))

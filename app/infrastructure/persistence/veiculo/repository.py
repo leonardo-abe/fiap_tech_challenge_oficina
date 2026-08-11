@@ -27,16 +27,26 @@ class SQLAlchemyVeiculoRepository:
         model = await self._session.get(VeiculoModel, veiculo_id)
         return self._to_entity(model) if model else None
 
+    async def buscar_por_placa(self, placa: str) -> Veiculo | None:
+        resultado = await self._session.execute(
+            select(VeiculoModel).where(VeiculoModel.placa == placa)
+        )
+        model = resultado.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
     async def existe_com_placa(self, placa: str) -> bool:
         resultado = await self._session.execute(
             select(VeiculoModel.id).where(VeiculoModel.placa == placa)
         )
         return resultado.scalar_one_or_none() is not None
 
-    async def listar(self, cliente_id: int | None = None) -> list[Veiculo]:
+    async def listar(
+        self, cliente_id: int | None = None, limit: int = 50, offset: int = 0
+    ) -> list[Veiculo]:
         query = select(VeiculoModel).order_by(VeiculoModel.id)
         if cliente_id is not None:
             query = query.where(VeiculoModel.cliente_id == cliente_id)
+        query = query.limit(limit).offset(offset)
         resultado = await self._session.execute(query)
         return [self._to_entity(model) for model in resultado.scalars().all()]
 
