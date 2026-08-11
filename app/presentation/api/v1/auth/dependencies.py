@@ -1,4 +1,6 @@
+import secrets
 from collections.abc import Callable
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -31,6 +33,13 @@ def get_token_provider() -> JWTTokenProvider:
     return JWTTokenProvider()
 
 
+@lru_cache
+def _get_hash_sem_correspondencia() -> str:
+    # gerado uma vez por processo, a partir de um valor aleatório que ninguém conhece -
+    # ver o comentário em AutenticarUsuarioUseCase.__init__ para o motivo de existir.
+    return BcryptPasswordHasher().hash(secrets.token_urlsafe(32))
+
+
 def get_autenticar_usuario_use_case(
     usuario_repository: SQLAlchemyUsuarioRepository = Depends(get_usuario_repository),
     password_hasher: BcryptPasswordHasher = Depends(get_password_hasher),
@@ -40,6 +49,7 @@ def get_autenticar_usuario_use_case(
         usuario_repository=usuario_repository,
         password_hasher=password_hasher,
         token_provider=token_provider,
+        hash_sem_correspondencia=_get_hash_sem_correspondencia(),
     )
 
 
