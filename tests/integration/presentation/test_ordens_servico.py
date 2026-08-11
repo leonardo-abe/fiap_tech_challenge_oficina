@@ -162,6 +162,29 @@ async def test_cancelamento(client):
     assert resposta.json()["status"] == "CANCELADA"
 
 
+async def test_gerar_orcamento_notifica_cliente_por_log(client, caplog):
+    ordem = await _criar_ordem_com_itens(client)
+    ordem_id = ordem["id"]
+    await client.post(
+        f"/api/v1/ordens-servico/{ordem_id}/diagnostico", headers=auth_headers(Perfil.MECANICO)
+    )
+
+    with caplog.at_level("INFO"):
+        resposta = await client.post(
+            f"/api/v1/ordens-servico/{ordem_id}/orcamento/gerar",
+            headers=auth_headers(Perfil.MECANICO),
+        )
+
+    assert resposta.status_code == 200
+    assert resposta.json()["status"] == "AGUARDANDO_APROVACAO"
+    # NOTIFICACAO_BACKEND=log (padrão de dev/teste) - a "entrega" do orçamento ao
+    # cliente vira uma linha de log em vez de um e-mail real (sem depender de rede).
+    mensagens = [registro.getMessage() for registro in caplog.records]
+    assert any(
+        str(ordem_id) in mensagem and _CLIENTE["email"] in mensagem for mensagem in mensagens
+    )
+
+
 async def test_reprovacao(client):
     ordem = await _criar_ordem_com_itens(client)
     ordem_id = ordem["id"]
