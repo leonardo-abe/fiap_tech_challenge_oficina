@@ -25,6 +25,10 @@ class Settings(BaseSettings):
 
     seed_admin_email: str
     seed_admin_senha: str
+    seed_atendente_email: str
+    seed_atendente_senha: str
+    seed_mecanico_email: str
+    seed_mecanico_senha: str
 
     # notificacao_backend é obrigatório (segue o padrão do resto das configs), mas os
     # campos smtp_* são condicionalmente obrigatórios - só fazem sentido quando o
