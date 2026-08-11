@@ -23,12 +23,3 @@ coverage.xml
 .vscode/
 .idea/
 .DS_Store
-
-# Material do desafio (não faz parte do código-fonte entregável)
-/*.pdf
-docs/relatorio-vulnerabilidades.pdf
-
-# Ferramentas pessoais de apoio - não fazem parte da aplicação entregável
-tools/
-
-AUDITORIA_ARQUITETURA.md
