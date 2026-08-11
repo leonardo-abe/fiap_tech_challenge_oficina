@@ -196,3 +196,11 @@ class FakeTokenProvider:
     def gerar_token(self, usuario_id: int, perfil: Perfil) -> str:
         self.tokens_gerados.append((usuario_id, perfil))
         return f"token-{usuario_id}-{perfil.value}"
+
+
+class FakeNotificadorOrcamento:
+    def __init__(self) -> None:
+        self.notificacoes_enviadas: list[tuple[str, str, int]] = []
+
+    async def notificar_orcamento_gerado(self, destinatario_nome, destinatario_email, ordem):
+        self.notificacoes_enviadas.append((destinatario_nome, destinatario_email, ordem.id))

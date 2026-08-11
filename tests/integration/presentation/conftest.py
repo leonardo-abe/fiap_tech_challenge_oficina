@@ -5,8 +5,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.infrastructure.db.session import get_session
+from app.infrastructure.notificacao.log_notificador_orcamento import LogNotificadorOrcamento
 from app.infrastructure.security.rate_limiter import limiter
 from app.main import app
+from app.presentation.api.v1.ordens_servico.dependencies import get_notificador_orcamento
 
 from ..conftest import truncate_all_tables
 
@@ -30,6 +32,10 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
                 raise
 
     app.dependency_overrides[get_session] = _get_test_session
+    # a suíte não pode depender de credenciais SMTP reais nem disparar e-mail de
+    # verdade a cada execução - independente do NOTIFICACAO_BACKEND configurado no
+    # .env de quem está rodando os testes localmente (ex.: para demo manual).
+    app.dependency_overrides[get_notificador_orcamento] = LogNotificadorOrcamento
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as async_client:

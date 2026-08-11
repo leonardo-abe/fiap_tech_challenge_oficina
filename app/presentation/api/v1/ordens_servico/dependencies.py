@@ -1,15 +1,19 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.ordem_servico.ports import NotificadorOrcamentoProtocol
 from app.application.ordem_servico.use_cases import (
     BuscarOrdemServicoUseCase,
     CalcularTempoMedioExecucaoUseCase,
     ConsultarStatusOrdemServicoUseCase,
     CriarOrdemServicoUseCase,
+    GerarOrcamentoUseCase,
     ListarOrdensServicoUseCase,
     MudarStatusOrdemServicoUseCase,
 )
 from app.infrastructure.db.session import get_session
+from app.infrastructure.notificacao.log_notificador_orcamento import LogNotificadorOrcamento
+from app.infrastructure.notificacao.smtp_notificador_orcamento import SmtpNotificadorOrcamento
 from app.infrastructure.persistence.cliente.repository import SQLAlchemyClienteRepository
 from app.infrastructure.persistence.ordem_servico.repository import (
     SQLAlchemyOrdemServicoRepository,
@@ -22,6 +26,7 @@ from app.presentation.api.v1.ordens_servico.controller import OrdemServicoContro
 from app.presentation.api.v1.pecas.dependencies import get_peca_repository
 from app.presentation.api.v1.servicos.dependencies import get_servico_repository
 from app.presentation.api.v1.veiculos.dependencies import get_veiculo_repository
+from app.shared.settings import settings
 
 
 def get_ordem_servico_repository(
@@ -54,6 +59,32 @@ def get_mudar_status_ordem_servico_use_case(
     ),
 ) -> MudarStatusOrdemServicoUseCase:
     return MudarStatusOrdemServicoUseCase(ordem_servico_repository=ordem_servico_repository)
+
+
+def get_notificador_orcamento() -> NotificadorOrcamentoProtocol:
+    if settings.notificacao_backend == "smtp":
+        return SmtpNotificadorOrcamento(
+            host=settings.smtp_host,
+            port=settings.smtp_port,
+            usuario=settings.smtp_usuario,
+            senha=settings.smtp_senha,
+            remetente=settings.smtp_remetente,
+        )
+    return LogNotificadorOrcamento()
+
+
+def get_gerar_orcamento_use_case(
+    ordem_servico_repository: SQLAlchemyOrdemServicoRepository = Depends(
+        get_ordem_servico_repository
+    ),
+    cliente_repository: SQLAlchemyClienteRepository = Depends(get_cliente_repository),
+    notificador: NotificadorOrcamentoProtocol = Depends(get_notificador_orcamento),
+) -> GerarOrcamentoUseCase:
+    return GerarOrcamentoUseCase(
+        ordem_servico_repository=ordem_servico_repository,
+        cliente_repository=cliente_repository,
+        notificador=notificador,
+    )
 
 
 def get_listar_ordens_servico_use_case(
@@ -97,6 +128,7 @@ def get_ordem_servico_controller(
     mudar_status_use_case: MudarStatusOrdemServicoUseCase = Depends(
         get_mudar_status_ordem_servico_use_case
     ),
+    gerar_orcamento_use_case: GerarOrcamentoUseCase = Depends(get_gerar_orcamento_use_case),
     listar_use_case: ListarOrdensServicoUseCase = Depends(get_listar_ordens_servico_use_case),
     buscar_use_case: BuscarOrdemServicoUseCase = Depends(get_buscar_ordem_servico_use_case),
     consultar_status_use_case: ConsultarStatusOrdemServicoUseCase = Depends(
@@ -109,6 +141,7 @@ def get_ordem_servico_controller(
     return OrdemServicoController(
         criar_use_case=criar_use_case,
         mudar_status_use_case=mudar_status_use_case,
+        gerar_orcamento_use_case=gerar_orcamento_use_case,
         listar_use_case=listar_use_case,
         buscar_use_case=buscar_use_case,
         consultar_status_use_case=consultar_status_use_case,
