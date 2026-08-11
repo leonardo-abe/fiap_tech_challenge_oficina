@@ -1,8 +1,14 @@
-from fastapi import FastAPI
+from datetime import UTC, datetime
+
+from fastapi import Depends, FastAPI, Response, status
+from pydantic import BaseModel
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.infrastructure.db.session import get_session
 from app.infrastructure.security.rate_limiter import limiter
 from app.presentation.api.v1.auth.router import router as auth_router
 from app.presentation.api.v1.clientes.router import router as clientes_router
@@ -33,6 +39,33 @@ app.include_router(pecas_router)
 app.include_router(ordens_servico_router)
 
 
+class HealthCheckSchema(BaseModel):
+    status: str
+    app_name: str
+    environment: str
+    database: str
+    verificado_em: datetime
+
+
 @app.get("/health", tags=["health"])
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health(
+    response: Response,
+    session: AsyncSession = Depends(get_session),
+) -> HealthCheckSchema:
+    try:
+        await session.execute(text("SELECT 1"))
+        database_status = "ok"
+    except Exception:
+        # o health check precisa detectar qualquer falha de conectividade com o banco
+        # (timeout, conexão recusada, credencial inválida etc.), não um tipo específico
+        # de erro - por isso o except amplo aqui é intencional, não um anti-pattern.
+        database_status = "indisponivel"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return HealthCheckSchema(
+        status="ok" if database_status == "ok" else "degradado",
+        app_name=settings.app_name,
+        environment=settings.environment,
+        database=database_status,
+        verificado_em=datetime.now(UTC),
+    )
