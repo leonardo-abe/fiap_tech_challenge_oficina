@@ -56,12 +56,15 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 
 | Módulo | O que faz |
 |---|---|
-| Clientes | CRUD, identificação por CPF/CNPJ (Value Object validado na criação) |
-| Veículos | CRUD, placa validada, vinculado a um cliente |
-| Serviços | CRUD do catálogo de serviços oferecidos |
-| Peças | CRUD com controle de estoque (baixa/reposição atômica) |
-| Ordens de Serviço | Criação com orçamento automático, máquina de estados completa, notificação de orçamento por e-mail, consulta pública de status, relatório de tempo médio de execução |
+| Clientes | CRUD, identificação por CPF/CNPJ (Value Object validado na criação), busca direta por documento (`GET /clientes/documento/{documento}`), listagem paginada |
+| Veículos | CRUD, placa validada, vinculado a um cliente, busca direta por placa (`GET /veiculos/placa/{placa}`), listagem paginada e filtrável por `cliente_id` |
+| Serviços | CRUD do catálogo, listagem paginada e filtrável por nome (busca parcial, case-insensitive) |
+| Peças | CRUD com controle de estoque (baixa/reposição atômica), listagem paginada e filtrável por nome (busca parcial, case-insensitive) |
+| Ordens de Serviço | Criação com orçamento automático, máquina de estados completa, notificação de orçamento por e-mail, consulta pública de status, relatório de tempo médio de execução, listagem paginada |
 | Usuários/Auth | Login JWT, RBAC por perfil (`ADMIN`/`ATENDENTE`/`MECANICO`) |
+
+Todas as listagens (`GET /.../`) aceitam `limit` (padrão 50, máx. 200) e `offset` (padrão 0)
+para paginação.
 
 ## Requisitos
 

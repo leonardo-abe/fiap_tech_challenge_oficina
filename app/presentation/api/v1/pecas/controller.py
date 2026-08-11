@@ -43,8 +43,10 @@ class PecaController:
         )
         return PecaSchema(**vars(resultado))
 
-    async def listar(self) -> list[PecaSchema]:
-        resultado = await self._listar_use_case.executar()
+    async def listar(
+        self, nome: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[PecaSchema]:
+        resultado = await self._listar_use_case.executar(nome=nome, limit=limit, offset=offset)
         return [PecaSchema(**vars(item)) for item in resultado]
 
     async def buscar(self, peca_id: int) -> PecaSchema:

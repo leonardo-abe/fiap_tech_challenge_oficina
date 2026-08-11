@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.domain.usuario.value_objects import Perfil
 from app.presentation.api.v1.auth.dependencies import require_roles
@@ -27,9 +27,19 @@ async def criar_cliente(
 
 @router.get("/")
 async def listar_clientes(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     controller: ClienteController = Depends(get_cliente_controller),
 ) -> list[ClienteSchema]:
-    return await controller.listar()
+    return await controller.listar(limit=limit, offset=offset)
+
+
+@router.get("/documento/{documento}")
+async def buscar_cliente_por_documento(
+    documento: str,
+    controller: ClienteController = Depends(get_cliente_controller),
+) -> ClienteSchema:
+    return await controller.buscar_por_documento(documento)
 
 
 @router.get("/{cliente_id}")

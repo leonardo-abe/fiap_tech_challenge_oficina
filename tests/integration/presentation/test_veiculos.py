@@ -95,6 +95,55 @@ async def test_buscar_veiculo_inexistente_retorna_404(client):
     assert resposta.status_code == 404
 
 
+async def test_buscar_veiculo_por_placa(client):
+    cliente_id = await _criar_cliente(client)
+    await client.post(
+        "/api/v1/veiculos/", json=_dados_veiculo(cliente_id), headers=auth_headers(Perfil.ADMIN)
+    )
+
+    resposta = await client.get(
+        "/api/v1/veiculos/placa/ABC1234", headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.json()["marca"] == "Fiat"
+
+
+async def test_buscar_veiculo_por_placa_inexistente_retorna_404(client):
+    resposta = await client.get(
+        "/api/v1/veiculos/placa/XYZ9999", headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 404
+
+
+async def test_buscar_veiculo_por_placa_invalida_retorna_422(client):
+    resposta = await client.get(
+        "/api/v1/veiculos/placa/123", headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 422
+
+
+async def test_listar_veiculos_respeita_limit(client):
+    cliente_id = await _criar_cliente(client)
+    await client.post(
+        "/api/v1/veiculos/", json=_dados_veiculo(cliente_id), headers=auth_headers(Perfil.ADMIN)
+    )
+    await client.post(
+        "/api/v1/veiculos/",
+        json=_dados_veiculo(cliente_id, placa="DEF5678"),
+        headers=auth_headers(Perfil.ADMIN),
+    )
+
+    resposta = await client.get(
+        "/api/v1/veiculos/", params={"limit": 1}, headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
+
+
 async def test_atualizar_e_remover_veiculo(client):
     cliente_id = await _criar_cliente(client)
     criado = (

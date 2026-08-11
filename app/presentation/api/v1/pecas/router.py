@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.domain.usuario.value_objects import Perfil
 from app.presentation.api.v1.auth.dependencies import require_roles
@@ -30,9 +30,12 @@ async def criar_peca(
 
 @router.get("/", dependencies=[_qualquer_perfil])
 async def listar_pecas(
+    nome: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     controller: PecaController = Depends(get_peca_controller),
 ) -> list[PecaSchema]:
-    return await controller.listar()
+    return await controller.listar(nome=nome, limit=limit, offset=offset)
 
 
 @router.get("/{peca_id}", dependencies=[_qualquer_perfil])

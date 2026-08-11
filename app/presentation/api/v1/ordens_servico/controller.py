@@ -82,8 +82,8 @@ class OrdemServicoController:
         resultado = await self._mudar_status_use_case.executar(ordem_id, novo_status)
         return OrdemServicoSchema.model_validate(resultado)
 
-    async def listar(self) -> list[OrdemServicoSchema]:
-        resultado = await self._listar_use_case.executar()
+    async def listar(self, limit: int = 50, offset: int = 0) -> list[OrdemServicoSchema]:
+        resultado = await self._listar_use_case.executar(limit=limit, offset=offset)
         return [OrdemServicoSchema.model_validate(item) for item in resultado]
 
     async def buscar(self, ordem_id: int) -> OrdemServicoSchema:

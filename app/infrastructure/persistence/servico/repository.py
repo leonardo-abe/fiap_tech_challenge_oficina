@@ -23,8 +23,14 @@ class SQLAlchemyServicoRepository:
         model = await self._session.get(ServicoModel, servico_id)
         return self._to_entity(model) if model else None
 
-    async def listar(self) -> list[Servico]:
-        resultado = await self._session.execute(select(ServicoModel).order_by(ServicoModel.nome))
+    async def listar(
+        self, nome: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[Servico]:
+        query = select(ServicoModel).order_by(ServicoModel.nome)
+        if nome is not None:
+            query = query.where(ServicoModel.nome.ilike(f"%{nome}%"))
+        query = query.limit(limit).offset(offset)
+        resultado = await self._session.execute(query)
         return [self._to_entity(model) for model in resultado.scalars().all()]
 
     async def atualizar(self, servico: Servico) -> Servico:

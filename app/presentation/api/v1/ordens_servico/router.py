@@ -91,9 +91,11 @@ async def cancelar_ordem_servico(
 
 @router.get("/", dependencies=[_qualquer_perfil])
 async def listar_ordens_servico(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     controller: OrdemServicoController = Depends(get_ordem_servico_controller),
 ) -> list[OrdemServicoSchema]:
-    return await controller.listar()
+    return await controller.listar(limit=limit, offset=offset)
 
 
 @router.get("/relatorios/tempo-medio-execucao", dependencies=[_apenas_admin])

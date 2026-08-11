@@ -39,6 +39,49 @@ async def test_listar_e_buscar_peca_com_qualquer_perfil(client):
     assert busca.status_code == 200
 
 
+async def test_listar_pecas_filtra_por_nome(client):
+    await client.post("/api/v1/pecas/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))
+    await client.post(
+        "/api/v1/pecas/",
+        json={
+            "nome": "Vela",
+            "descricao": "Vela de ignição",
+            "preco": "25.00",
+            "quantidade_inicial": 5,
+        },
+        headers=auth_headers(Perfil.ADMIN),
+    )
+
+    resposta = await client.get(
+        "/api/v1/pecas/", params={"nome": "filtro"}, headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
+    assert resposta.json()[0]["nome"] == "Filtro de óleo"
+
+
+async def test_listar_pecas_respeita_limit(client):
+    await client.post("/api/v1/pecas/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))
+    await client.post(
+        "/api/v1/pecas/",
+        json={
+            "nome": "Vela",
+            "descricao": "Vela de ignição",
+            "preco": "25.00",
+            "quantidade_inicial": 5,
+        },
+        headers=auth_headers(Perfil.ADMIN),
+    )
+
+    resposta = await client.get(
+        "/api/v1/pecas/", params={"limit": 1}, headers=auth_headers(Perfil.ADMIN)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
+
+
 async def test_repor_estoque(client):
     criada = (
         await client.post("/api/v1/pecas/", json=_DADOS, headers=auth_headers(Perfil.ADMIN))

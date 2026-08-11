@@ -10,16 +10,23 @@ _CLIENTE = {
 }
 
 
-async def _criar_cliente_e_veiculo(client) -> tuple[int, int]:
+async def _criar_cliente_e_veiculo(client, documento=None, placa="ABC1234") -> tuple[int, int]:
+    dados_cliente = dict(_CLIENTE)
+    if documento is not None:
+        dados_cliente["documento"] = documento
+        dados_cliente["email"] = f"{documento}@x.com"
+
     cliente = (
-        await client.post("/api/v1/clientes/", json=_CLIENTE, headers=auth_headers(Perfil.ADMIN))
+        await client.post(
+            "/api/v1/clientes/", json=dados_cliente, headers=auth_headers(Perfil.ADMIN)
+        )
     ).json()
     veiculo = (
         await client.post(
             "/api/v1/veiculos/",
             json={
                 "cliente_id": cliente["id"],
-                "placa": "ABC1234",
+                "placa": placa,
                 "marca": "Fiat",
                 "modelo": "Uno",
                 "ano": 2015,
@@ -53,8 +60,10 @@ async def _criar_servico_e_peca(client) -> tuple[int, int]:
     return servico["id"], peca["id"]
 
 
-async def _criar_ordem_com_itens(client) -> dict:
-    cliente_id, veiculo_id = await _criar_cliente_e_veiculo(client)
+async def _criar_ordem_com_itens(client, documento=None, placa="ABC1234") -> dict:
+    cliente_id, veiculo_id = await _criar_cliente_e_veiculo(
+        client, documento=documento, placa=placa
+    )
     servico_id, peca_id = await _criar_servico_e_peca(client)
 
     resposta = await client.post(
@@ -217,6 +226,18 @@ async def test_listar_e_buscar_administrativo(client):
     assert len(listagem.json()) == 1
     assert busca.status_code == 200
     assert inexistente.status_code == 404
+
+
+async def test_listar_ordens_servico_respeita_limit(client):
+    await _criar_ordem_com_itens(client)
+    await _criar_ordem_com_itens(client, documento="52998224725", placa="DEF5678")
+
+    resposta = await client.get(
+        "/api/v1/ordens-servico/", params={"limit": 1}, headers=auth_headers(Perfil.MECANICO)
+    )
+
+    assert resposta.status_code == 200
+    assert len(resposta.json()) == 1
 
 
 async def test_consulta_publica_de_status(client):

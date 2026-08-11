@@ -6,8 +6,10 @@ class ListarServicosUseCase:
     def __init__(self, servico_repository: ServicoRepositoryProtocol) -> None:
         self._servico_repository = servico_repository
 
-    async def executar(self) -> list[ServicoOutput]:
-        servicos = await self._servico_repository.listar()
+    async def executar(
+        self, nome: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[ServicoOutput]:
+        servicos = await self._servico_repository.listar(nome=nome, limit=limit, offset=offset)
 
         return [
             ServicoOutput(

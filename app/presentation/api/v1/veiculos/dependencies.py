@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.veiculo.use_cases import (
     AtualizarVeiculoUseCase,
+    BuscarVeiculoPorPlacaUseCase,
     BuscarVeiculoUseCase,
     CriarVeiculoUseCase,
     ListarVeiculosUseCase,
@@ -45,6 +46,12 @@ def get_buscar_veiculo_use_case(
     return BuscarVeiculoUseCase(veiculo_repository=veiculo_repository)
 
 
+def get_buscar_veiculo_por_placa_use_case(
+    veiculo_repository: SQLAlchemyVeiculoRepository = Depends(get_veiculo_repository),
+) -> BuscarVeiculoPorPlacaUseCase:
+    return BuscarVeiculoPorPlacaUseCase(veiculo_repository=veiculo_repository)
+
+
 def get_listar_veiculos_use_case(
     veiculo_repository: SQLAlchemyVeiculoRepository = Depends(get_veiculo_repository),
 ) -> ListarVeiculosUseCase:
@@ -61,6 +68,9 @@ def get_veiculo_controller(
     criar_use_case: CriarVeiculoUseCase = Depends(get_criar_veiculo_use_case),
     atualizar_use_case: AtualizarVeiculoUseCase = Depends(get_atualizar_veiculo_use_case),
     buscar_use_case: BuscarVeiculoUseCase = Depends(get_buscar_veiculo_use_case),
+    buscar_por_placa_use_case: BuscarVeiculoPorPlacaUseCase = Depends(
+        get_buscar_veiculo_por_placa_use_case
+    ),
     listar_use_case: ListarVeiculosUseCase = Depends(get_listar_veiculos_use_case),
     remover_use_case: RemoverVeiculoUseCase = Depends(get_remover_veiculo_use_case),
 ) -> VeiculoController:
@@ -68,6 +78,7 @@ def get_veiculo_controller(
         criar_use_case=criar_use_case,
         atualizar_use_case=atualizar_use_case,
         buscar_use_case=buscar_use_case,
+        buscar_por_placa_use_case=buscar_por_placa_use_case,
         listar_use_case=listar_use_case,
         remover_use_case=remover_use_case,
     )

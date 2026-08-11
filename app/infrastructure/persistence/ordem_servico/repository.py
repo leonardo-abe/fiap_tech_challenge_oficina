@@ -52,7 +52,7 @@ class SQLAlchemyOrdemServicoRepository:
         model = await self._buscar_model_com_itens(ordem_id)
         return self._to_entity(model) if model else None
 
-    async def listar(self) -> list[OrdemServico]:
+    async def listar(self, limit: int = 50, offset: int = 0) -> list[OrdemServico]:
         resultado = await self._session.execute(
             select(OrdemServicoModel)
             .options(
@@ -60,6 +60,8 @@ class SQLAlchemyOrdemServicoRepository:
                 selectinload(OrdemServicoModel.itens_peca),
             )
             .order_by(OrdemServicoModel.recebida_em.desc())
+            .limit(limit)
+            .offset(offset)
         )
         return [self._to_entity(model) for model in resultado.scalars().all()]
 
