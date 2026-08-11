@@ -1,6 +1,6 @@
 # Relatório de Vulnerabilidades
 
-**Data:** 2026-08-07
+**Data:** 2026-08-07 (achados originais) — snapshot do SonarQube Cloud atualizado em 2026-08-11
 **Ferramentas:** [bandit](https://bandit.readthedocs.io/) 1.9.4 (SAST) · [pip-audit](https://pypi.org/project/pip-audit/) 2.10.1 (SCA) · [SonarQube](https://www.sonarsource.com/products/sonarqube/) Community Edition (SAST/hotspots, self-hosted)
 **Ambiente:** Python 3.12.8
 
@@ -19,11 +19,12 @@ SonarQube foi rodado localmente via Docker, com o repositório integrado diretam
 ### SAST — bandit (análise estática do código)
 
 ```
-Total lines of code: 3320
+Total lines of code: 3573
 Total issues (by severity): Undefined: 0, Low: 0, Medium: 0, High: 0
 ```
 
-Nenhum achado em `app/` e `scripts/`.
+Nenhum achado em `app/` e `scripts/` (reexecutado em 2026-08-11, após as features e
+correções mais recentes — número de linhas maior que o original por conta disso).
 
 ### SCA — pip-audit (dependências)
 
@@ -54,24 +55,30 @@ cada caso antes de descartá-lo.
 ### SonarQube Cloud (integração direta com o GitHub) — Quality Gate
 
 Além da rodada local (self-hosted, acima), o repositório foi integrado diretamente ao
-SonarQube Cloud via GitHub. Snapshot do dashboard ("Overall Code"), após as correções
-desta rodada:
+SonarQube Cloud via GitHub, com análise automática a cada PR (`SonarCloud Code Analysis`
+como check obrigatório). Snapshot do dashboard ("Overall Code") mais recente, no commit
+`756f1b0` (6,5k linhas de código analisadas):
 
 | Métrica | Resultado |
 |---|---|
-| Quality Gate ("Sonar way") | ✅ Passed |
-| Security | `E` — 6 issues em aberto |
-| Reliability | `A` — 0 issues em aberto |
-| Maintainability | `A` — 33 issues em aberto (code smells) |
-| Duplications | 0.0% |
+| Quality Gate | ✅ (ícone verde ao lado do branch `main` no dashboard) |
+| Security | `A` — 0 issues em aberto |
+| Reliability | `A` — 1 issue em aberto |
+| Maintainability | `A` — 34 issues em aberto (code smells) |
+| Accepted Issues | 0 (nenhum issue válido foi só "aceito"/dispensado sem correção) |
+| Duplications | 0.0% (9,1k linhas avaliadas) |
 | Coverage | Não configurada nesta integração (exige um passo extra de setup no SonarQube Cloud) |
-| Security Hotspots (métrica legada, sendo descontinuada) | 0 |
 
-O Quality Gate padrão ("Sonar way") avalia principalmente métricas de *New Code*, não de
-*Overall Code* — por isso ele aparece como "Passed" mesmo com o rating de Security em `E`
-no código já existente. Os 6 issues de Security e os 33 de Maintainability ainda não foram
-triados individualmente item a item (fica para uma próxima rodada). A cobertura de testes
-real do projeto (100% em `domain`/`application`, 98% em `app/` inteiro, ver
+Os achados de Security de uma rodada anterior foram corrigidos de fato (não suprimidos) —
+ver `app/application/usuario/use_cases/autenticar_usuario.py` (hash de referência do login
+gerado em runtime em vez de string fixa no código) e `docker-compose.yml`/
+`docker-compose.test.yml` (fallback de credencial trocado pelo operador `:?`, que falha
+explícito em vez de usar senha fraca por padrão) — daí o rating de Security estar em `A` e
+`Accepted Issues` em 0: nenhum achado foi dispensado, todos foram corrigidos.
+
+O issue de Reliability e os 34 de Maintainability ainda não foram triados individualmente
+item a item (fica para uma próxima rodada). A cobertura de testes real do
+projeto (100% em `domain`/`application`, 98% em `app/` inteiro, ver
 [README.md](../README.md#testes)) não é reportada automaticamente para o SonarQube Cloud
 sem esse passo extra de integração.
 
