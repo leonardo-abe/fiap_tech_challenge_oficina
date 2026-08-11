@@ -31,6 +31,7 @@ RUN useradd --create-home --shell /usr/sbin/nologin appuser
 # fazem parte da imagem final.
 COPY --from=builder --chown=appuser:appuser /app/.venv ./.venv
 COPY --from=builder --chown=appuser:appuser /app/app ./app
+COPY --from=builder --chown=appuser:appuser /app/scripts ./scripts
 COPY --from=builder --chown=appuser:appuser /app/migrations ./migrations
 COPY --from=builder --chown=appuser:appuser /app/alembic.ini ./
 COPY --from=builder --chown=appuser:appuser /app/pyproject.toml /app/uv.lock ./
