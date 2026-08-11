@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.usuario.dtos import TokenPayload
@@ -16,7 +16,7 @@ from app.infrastructure.security.jwt_provider import JWTTokenProvider
 from app.infrastructure.security.password_hasher import BcryptPasswordHasher
 from app.presentation.api.v1.auth.controller import AuthController
 
-_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_usuario_repository(
@@ -69,10 +69,16 @@ def get_criar_usuario_use_case(
 
 
 def get_current_user(
-    token: Annotated[str, Depends(_oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
     token_provider: JWTTokenProvider = Depends(get_token_provider),
 ) -> TokenPayload:
-    return token_provider.decodificar_token(token)
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não autenticado.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token_provider.decodificar_token(credentials.credentials)
 
 
 def require_roles(*perfis_permitidos: Perfil) -> Callable[[TokenPayload], TokenPayload]:
