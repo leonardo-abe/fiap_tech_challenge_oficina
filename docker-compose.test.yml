@@ -2,15 +2,15 @@ services:
   db-test:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${TEST_POSTGRES_USER:-oficina_test}
-      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-oficina_test}
-      POSTGRES_DB: ${TEST_POSTGRES_DB:-oficina_test}
+      POSTGRES_USER: ${TEST_POSTGRES_USER:?defina TEST_POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?defina TEST_POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${TEST_POSTGRES_DB:?defina TEST_POSTGRES_DB no .env}
     ports:
       - "5433:5432"
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${TEST_POSTGRES_USER:-oficina_test}"]
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_POSTGRES_USER:?defina TEST_POSTGRES_USER no .env}"]
       interval: 2s
       timeout: 5s
       retries: 10

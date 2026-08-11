@@ -7,7 +7,7 @@ services:
       - path: ./.env
         required: false
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-oficina}:${POSTGRES_PASSWORD:-oficina}@db:5432/${POSTGRES_DB:-oficina}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?defina POSTGRES_USER no .env}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db:5432/${POSTGRES_DB:?defina POSTGRES_DB no .env}
     depends_on:
       db:
         condition: service_healthy
@@ -16,15 +16,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-oficina}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oficina}
-      POSTGRES_DB: ${POSTGRES_DB:-oficina}
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oficina}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?defina POSTGRES_USER no .env}"]
       interval: 5s
       timeout: 5s
       retries: 5

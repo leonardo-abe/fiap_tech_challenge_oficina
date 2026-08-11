@@ -24,12 +24,17 @@ async def _criar_usuario(repositorio, hasher, ativo=True):
     )
 
 
+_HASH_SEM_CORRESPONDENCIA = "hash(nunca-bate)"
+
+
 async def test_autenticar_usuario_sucesso():
     repositorio = FakeUsuarioRepository()
     hasher = FakePasswordHasher()
     token_provider = FakeTokenProvider()
     await _criar_usuario(repositorio, hasher)
-    use_case = AutenticarUsuarioUseCase(repositorio, hasher, token_provider)
+    use_case = AutenticarUsuarioUseCase(
+        repositorio, hasher, token_provider, _HASH_SEM_CORRESPONDENCIA
+    )
 
     resultado = await use_case.executar(
         AutenticarUsuarioInput(email="joao@x.com", senha="segredo123")
@@ -41,7 +46,10 @@ async def test_autenticar_usuario_sucesso():
 
 async def test_autenticar_usuario_inexistente_levanta_erro():
     use_case = AutenticarUsuarioUseCase(
-        FakeUsuarioRepository(), FakePasswordHasher(), FakeTokenProvider()
+        FakeUsuarioRepository(),
+        FakePasswordHasher(),
+        FakeTokenProvider(),
+        _HASH_SEM_CORRESPONDENCIA,
     )
 
     with pytest.raises(CredenciaisInvalidasError):
@@ -52,7 +60,9 @@ async def test_autenticar_usuario_com_senha_errada_levanta_erro():
     repositorio = FakeUsuarioRepository()
     hasher = FakePasswordHasher()
     await _criar_usuario(repositorio, hasher)
-    use_case = AutenticarUsuarioUseCase(repositorio, hasher, FakeTokenProvider())
+    use_case = AutenticarUsuarioUseCase(
+        repositorio, hasher, FakeTokenProvider(), _HASH_SEM_CORRESPONDENCIA
+    )
 
     with pytest.raises(CredenciaisInvalidasError):
         await use_case.executar(AutenticarUsuarioInput(email="joao@x.com", senha="errada"))
@@ -62,7 +72,9 @@ async def test_autenticar_usuario_inativo_levanta_erro():
     repositorio = FakeUsuarioRepository()
     hasher = FakePasswordHasher()
     await _criar_usuario(repositorio, hasher, ativo=False)
-    use_case = AutenticarUsuarioUseCase(repositorio, hasher, FakeTokenProvider())
+    use_case = AutenticarUsuarioUseCase(
+        repositorio, hasher, FakeTokenProvider(), _HASH_SEM_CORRESPONDENCIA
+    )
 
     with pytest.raises(CredenciaisInvalidasError):
         await use_case.executar(AutenticarUsuarioInput(email="joao@x.com", senha="segredo123"))
