@@ -27,10 +27,13 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 
 ## Documentação
 
-- [AUDITORIA_ARQUITETURA.md](AUDITORIA_ARQUITETURA.md) — arquitetura em detalhe: as
-  camadas (`domain` → `application` → `infrastructure`/`presentation`, regra de
-  dependência única), Value Objects (`Documento`, `Placa`, `Money`), máquina de estados
-  da OS, e o histórico de achados/correções de qualidade e segurança.
+- [docs/arquitetura.md](docs/arquitetura.md) — camadas (Clean Architecture), regra de
+  dependência, Domain-Driven Design aplicado (entidades, Value Objects, aggregate,
+  máquina de estados da OS) e portas/adapters.
+- [docs/linguagem-ubiqua.md](docs/linguagem-ubiqua.md) — glossário dos termos de negócio
+  e onde cada um vive no código.
+- [docs/banco-de-dados.md](docs/banco-de-dados.md) — justificativa da escolha do
+  PostgreSQL.
 - [docs/relatorio-vulnerabilidades.md](docs/relatorio-vulnerabilidades.md) — scan de
   vulnerabilidades (SAST/SCA) e cobertura por categoria do OWASP Top 10.
 
@@ -39,7 +42,7 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 - **Linguagem/runtime**: Python 3.12
 - **Framework web**: FastAPI + Uvicorn
 - **Banco de dados**: PostgreSQL 16, via SQLAlchemy 2.0 assíncrono (`asyncpg`) — ver
-  justificativa na seção abaixo
+  [justificativa da escolha](docs/banco-de-dados.md)
 - **Migrações**: Alembic
 - **Autenticação**: JWT (`PyJWT`) + `bcrypt` para hash de senha
 - **Validação**: Pydantic v2 / `pydantic-settings`, `validate-docbr` (CPF/CNPJ)
@@ -48,20 +51,6 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 - **Containers**: Docker + Docker Compose
 - **Testes**: pytest, `pytest-asyncio`, `pytest-cov`
 - **Qualidade/segurança**: ruff (lint), bandit (SAST), pip-audit (SCA), SonarQube
-
-### Por que PostgreSQL?
-
-- O domínio é fortemente relacional (cliente → veículo → OS → itens de serviço/peça,
-  com integridade referencial real entre eles) — favorece um banco relacional sobre um
-  documento/NoSQL.
-- A baixa de estoque de peças precisa de `UPDATE` atômico condicional sob concorrência
-  real (duas OS decrementando a mesma peça ao mesmo tempo) — exige transações ACID e
-  garantias de isolamento que o Postgres oferece nativamente.
-- Valores monetários usam `Decimal` de ponta a ponta (nunca `float`); o tipo `NUMERIC`
-  do Postgres preserva essa precisão sem conversão.
-- Maduro, gratuito, com driver assíncrono de primeira classe (`asyncpg`) e imagem
-  oficial (`postgres:16-alpine`) — sem custo de licença nem serviço gerenciado para
-  rodar localmente.
 
 ## Funcionalidades principais
 
