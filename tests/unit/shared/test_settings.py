@@ -10,6 +10,10 @@ _CAMPOS_VALIDOS = {
     "jwt_expiracao_minutos": 60,
     "seed_admin_email": "admin@oficina.com.br",
     "seed_admin_senha": "uma-senha-forte-qualquer",
+    "seed_atendente_email": "atendente@oficina.com.br",
+    "seed_atendente_senha": "uma-senha-forte-qualquer",
+    "seed_mecanico_email": "mecanico@oficina.com.br",
+    "seed_mecanico_senha": "uma-senha-forte-qualquer",
     "notificacao_backend": "log",
 }
 

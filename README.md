@@ -84,7 +84,7 @@ abaixo), depois:
 
 ```bash
 docker compose up --build
-docker compose exec api uv run python -m scripts.seed_admin
+docker compose exec api uv run python -m scripts.seed_usuarios
 ```
 
 **Local, sem Docker:**
@@ -92,7 +92,7 @@ docker compose exec api uv run python -m scripts.seed_admin
 ```bash
 uv sync
 uv run alembic upgrade head
-uv run python -m scripts.seed_admin
+uv run python -m scripts.seed_usuarios
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
@@ -100,10 +100,16 @@ uv run uvicorn app.main:app --reload --port 8000
 consoles Windows sem UTF-8 ativo por causa de um emoji na saída — `uvicorn` direto evita
 esse problema.)
 
-O `seed_admin` cria o usuário administrador inicial com as credenciais definidas em
-`SEED_ADMIN_EMAIL`/`SEED_ADMIN_SENHA` no `.env` (é idempotente — rodar de novo não
-duplica o usuário). Use essas credenciais em `POST /api/v1/auth/login` para obter o
-token JWT e acessar as rotas administrativas.
+O `seed_usuarios` cria um usuário de teste por perfil (é idempotente — rodar de novo não
+duplica ninguém). Use qualquer um deles em `POST /api/v1/auth/login` para obter o token
+JWT — o perfil define o que a conta pode fazer (ver RBAC em
+[docs/arquitetura.md](docs/arquitetura.md)):
+
+| Perfil | E-mail (`.env.example`) | Senha (`.env.example`) | Variáveis |
+|---|---|---|---|
+| `ADMIN` | `admin@oficina.com.br` | `admin123` | `SEED_ADMIN_EMAIL`/`SEED_ADMIN_SENHA` |
+| `ATENDENTE` | `atendente@oficina.com.br` | `atendente123` | `SEED_ATENDENTE_EMAIL`/`SEED_ATENDENTE_SENHA` |
+| `MECANICO` | `mecanico@oficina.com.br` | `mecanico123` | `SEED_MECANICO_EMAIL`/`SEED_MECANICO_SENHA` |
 
 ## Configuração do `.env`
 
