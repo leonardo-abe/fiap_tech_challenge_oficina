@@ -11,10 +11,10 @@ ENV UV_COMPILE_BYTECODE=1 \
 # si é instalado pelo uv sync de baixo, depois que o código-fonte chega - por isso essa
 # linha sozinha é só a primeira metade do setup, não o resultado final.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project --no-dev
+RUN uv sync --frozen --no-install-project --no-dev --no-build
 
 COPY . .
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-build
 
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
