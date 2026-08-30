@@ -57,8 +57,12 @@ def get_mudar_status_ordem_servico_use_case(
     ordem_servico_repository: SQLAlchemyOrdemServicoRepository = Depends(
         get_ordem_servico_repository
     ),
+    peca_repository: SQLAlchemyPecaRepository = Depends(get_peca_repository),
 ) -> MudarStatusOrdemServicoUseCase:
-    return MudarStatusOrdemServicoUseCase(ordem_servico_repository=ordem_servico_repository)
+    return MudarStatusOrdemServicoUseCase(
+        ordem_servico_repository=ordem_servico_repository,
+        peca_repository=peca_repository,
+    )
 
 
 def get_notificador_orcamento() -> NotificadorOrcamentoProtocol:
