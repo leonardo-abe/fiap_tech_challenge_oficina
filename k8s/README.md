@@ -17,6 +17,20 @@ são provisionados pelo Terraform em `/infra` - ver `infra/README.md`.
     -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
   ```
 
+## Imagem da aplicação
+
+Os manifestos apontam para `ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest`. Até
+existir uma pipeline publicando essa imagem (ver `.github/workflows/`), builde localmente
+e carregue direto no cluster kind:
+
+```bash
+docker build -t ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest ..
+kind load docker-image ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest --name oficina
+```
+
+`deployment.yaml`/`migrate-job.yaml` usam `imagePullPolicy: IfNotPresent` justamente para
+usar essa imagem carregada localmente em vez de tentar puxar do registry.
+
 ## Aplicar
 
 ```bash
