@@ -196,15 +196,17 @@ infraestrutura, cobertos indiretamente pelos testes de integração.
 
 ```mermaid
 flowchart LR
-    subgraph CICD["GitHub Actions (push/PR na main)"]
+    subgraph CICD["GitHub Actions (push na main)"]
         direction LR
-        Lint[lint] --> Test[test] --> Build["build\n+ push imagem (GHCR)"] --> E2E["deploy-e2e\ncluster kind efêmero no runner"]
+        Lint[lint] --> Test[test] --> Build["build\n+ push imagem (GHCR)"]
+        Build --> E2E["deploy-e2e\n(runner hospedado)\ncluster kind efêmero - só validação"]
+        Build --> Local["deploy-local\n(runner self-hosted)\natualiza o cluster persistente"]
     end
 
     Build -->|"docker push"| GHCR[("GHCR\nghcr.io/.../fiap_tech_challenge_oficina")]
 
-    subgraph Infra["Terraform (infra/)"]
-        Cluster["cluster kind local"]
+    subgraph Infra["Terraform (infra/) - rodado uma vez, manualmente"]
+        Cluster["cluster kind local\n(persistente)"]
         PG[("Postgres\n(Deployment + PVC)")]
         Cluster --> PG
     end
@@ -220,6 +222,7 @@ flowchart LR
         Svc --> Deploy
     end
 
+    Local -->|"kubectl apply"| K8s
     GHCR --> Deploy
     Deploy --> PG
     Migrate --> PG
@@ -229,14 +232,20 @@ flowchart LR
 - **Componentes da aplicação**: a mesma API FastAPI da Fase 1 (Clean Architecture),
   agora rodando como `Deployment` com múltiplas réplicas atrás de um `Service`.
 - **Infraestrutura provisionada**: `infra/` (Terraform) cria o cluster Kubernetes local
-  (kind) e o Postgres dentro dele; `k8s/` aplica os manifestos da própria API (Job de
-  migration, Deployment, Service, HPA) nesse cluster.
-- **Fluxo de deploy**: a cada push/PR na `main`, o GitHub Actions roda lint → testes →
-  build/push da imagem (GHCR) → um deploy de ponta a ponta num cluster kind **efêmero
-  dentro do próprio runner** (sobe, aplica tudo, faz smoke test em `/health`, derruba).
-  Esse cluster de CI não é persistente nem acessível de fora — é só validação
-  automatizada. Para rodar de verdade (e ver o HPA escalando sob carga, demonstrado no
-  vídeo), o cluster kind é levantado **localmente** com o mesmo Terraform.
+  (kind) e o Postgres dentro dele, uma vez, manualmente; `k8s/` aplica os manifestos da
+  própria API (Job de migration, Deployment, Service, HPA) nesse cluster.
+- **Fluxo de deploy**: todo push na `main` roda lint → testes → build/push da imagem
+  (GHCR) e então dois deploys em paralelo:
+  - `deploy-e2e`, num runner **hospedado** do GitHub, sobe um cluster kind **efêmero
+    dentro do próprio runner**, aplica tudo e faz smoke test em `/health` — é só
+    **validação automatizada** de que o deploy funciona; o cluster é descartado ao fim
+    do job, não acessível de fora.
+  - `deploy-local`, num runner **self-hosted** (a própria máquina de quem for
+    demonstrar), atualiza de fato o cluster kind **persistente** já de pé — esse é o
+    Continuous Deployment propriamente dito: o ambiente que fica no ar entre um push e
+    outro, e onde roda a demonstração do vídeo (inclusive o HPA escalando sob carga).
+  Ver [`k8s/README.md`](k8s/README.md#cd-de-verdade-runner-self-hosted-job-deploy-local-do-cicd)
+  para configurar o runner self-hosted.
 
 ### Executar
 

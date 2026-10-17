@@ -88,12 +88,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Sobe um cluster kind efêmero dentro do próprio runner (via o mesmo Terraform de
-  # /infra, exercitando-o de verdade) só para validar que a imagem recém-publicada
-  # sobe de ponta a ponta no Kubernetes - banco, migration, Deployment e /health. O
-  # cluster inteiro é descartado com o runner ao fim do job; não é infraestrutura
-  # persistente (essa é levantada localmente por quem for gravar a demonstração/HPA,
-  # já que o runner não é alcançável de fora - ver infra/README.md e k8s/README.md).
+  # VALIDAÇÃO automatizada, não deploy contínuo de verdade: sobe um cluster kind
+  # efêmero dentro do próprio runner hospedado (via o mesmo Terraform de /infra,
+  # exercitando-o de verdade) só para provar que a imagem recém-publicada sobe de
+  # ponta a ponta no Kubernetes - banco, migration, Deployment e /health. O cluster
+  # inteiro é descartado com o runner ao fim do job; nada fica no ar, porque um runner
+  # hospedado do GitHub não tem como ficar acessível depois que o job termina. Quem
+  # efetivamente atualiza um ambiente persistente e alcançável é o job "deploy-local"
+  # logo abaixo.
   deploy-e2e:
     runs-on: ubuntu-latest
     needs: build
@@ -157,3 +159,54 @@ jobs:
         if: always()
         working-directory: infra
         run: terraform destroy -auto-approve -var="postgres_password=${{ github.run_id }}"
+
+  # Continuous DEPLOYMENT de verdade: atualiza o cluster kind PERSISTENTE que já está
+  # de pé na máquina onde esse runner self-hosted roda (criado uma vez, manualmente,
+  # via "terraform apply" - ver infra/README.md). Diferente do deploy-e2e acima, esse
+  # ambiente continua no ar depois do job terminar - é nele que a demonstração/vídeo
+  # roda, e é esse job que efetivamente conecta "push na main" a "app atualizado no
+  # cluster que você está olhando".
+  #
+  # Pré-requisitos na máquina que hospeda o runner (ver k8s/README.md):
+  #   - cluster kind "oficina" já criado e com kubeconfig mesclado ao padrão
+  #     (`kind export kubeconfig --name oficina`), para o `kubectl` funcionar sem
+  #     configuração extra nos passos abaixo;
+  #   - runner self-hosted do GitHub Actions instalado e rodando (Settings > Actions >
+  #     Runners > New self-hosted runner).
+  #
+  # Segurança: um runner self-hosted em repositório PÚBLICO é perigoso se qualquer
+  # pull_request puder disparar jobs nele (um PR malicioso rodaria código arbitrário na
+  # sua máquina). Por isso este job só roda em push direto na main - só quem tem
+  # permissão de escrita no repositório consegue disparar (ou alterar) este job; ele
+  # nunca roda em pull_request, nem mesmo de PRs do próprio repositório.
+  deploy-local:
+    runs-on: self-hosted
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Carregar imagem no cluster local
+        run: |
+          docker pull ${{ env.IMAGE }}:${{ github.sha }}
+          kind load docker-image ${{ env.IMAGE }}:${{ github.sha }} --name oficina
+
+      - name: Atualizar deploy
+        run: |
+          # o Job de migration é imutável depois de criado - sem apagar o anterior, o
+          # "kubectl apply" falharia tentando mudar um campo que o Kubernetes não deixa
+          # alterar num Job já existente.
+          kubectl delete job oficina-migrate -n oficina --ignore-not-found
+          sed "s|:latest|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
+          kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
+
+          sed "s|:latest|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
+          kubectl rollout status deployment/oficina-api -n oficina --timeout=120s
+
+      - name: Smoke test (/health)
+        run: |
+          kubectl port-forward svc/oficina-api 8000:8000 -n oficina &
+          PF_PID=$!
+          sleep 5
+          curl -sf http://localhost:8000/health
+          kill $PF_PID

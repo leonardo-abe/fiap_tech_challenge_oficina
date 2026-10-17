@@ -66,3 +66,33 @@ kubectl get hpa -n oficina -w
 # em outro terminal, gere carga contra a API (via port-forward acima ou um pod dentro
 # do cluster), por exemplo com k6/hey, ou um loop simples de curl em paralelo.
 ```
+
+## CD de verdade: runner self-hosted (job `deploy-local` do CI/CD)
+
+O job `deploy-e2e` do workflow (`.github/workflows/ci-cd.yml`) só **valida** que o deploy
+funciona, num cluster descartável dentro do runner hospedado do GitHub - nada fica no ar
+depois. Para a pipeline realmente **atualizar o cluster que você usa na demonstração** a
+cada push na `main` (Continuous Deployment de verdade, não só validação), registre a sua
+própria máquina como um runner self-hosted do GitHub Actions:
+
+1. Deixe o cluster de pé (`cd ../infra && terraform apply` - ver `infra/README.md`) e
+   mescle o kubeconfig no padrão, para o `kubectl` funcionar sem configuração extra:
+   ```bash
+   kind export kubeconfig --name oficina
+   ```
+2. No GitHub: **Settings → Actions → Runners → New self-hosted runner** e siga os
+   comandos que a própria página gera para o seu sistema operacional (baixa o agente,
+   registra no repositório).
+3. Rode o runner (`./run.sh` ou `run.cmd`, conforme o SO) e deixe o processo aberto - é
+   ele quem executa o job `deploy-local` sempre que houver um push na `main`.
+
+> **Segurança**: só é seguro manter um runner self-hosted em repositório público porque
+> o job `deploy-local` está restrito a `push` direto na `main` - nunca roda em
+> `pull_request` (nem de PRs do próprio repositório). Um runner self-hosted exposto a
+> `pull_request` de forks seria uma porta aberta para rodar código arbitrário na sua
+> máquina a partir de um PR malicioso.
+
+Com o runner rodando, qualquer push na `main` (merge de PR, por exemplo) atualiza
+automaticamente a imagem rodando no seu cluster local - é esse fluxo que vale gravar no
+vídeo: um `git push`, a aba *Actions* do GitHub executando o job `deploy-local` ao vivo, e
+os pods em `kubectl get pods -n oficina -w` sendo substituídos pela nova versão.
