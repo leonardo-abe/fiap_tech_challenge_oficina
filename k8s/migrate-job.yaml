@@ -16,6 +16,7 @@ spec:
       containers:
         - name: migrate
           image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest
+          imagePullPolicy: IfNotPresent
           command: ["uv", "run", "alembic", "upgrade", "head"]
           envFrom:
             - configMapRef:
