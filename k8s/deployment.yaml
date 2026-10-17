@@ -13,9 +13,16 @@ spec:
       labels:
         app: oficina-api
     spec:
+      # a API não fala com a API do Kubernetes - não precisa do token de service
+      # account que o Kubernetes automonta por padrão.
+      automountServiceAccountToken: false
       containers:
         - name: api
-          image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest
+          # ":local" é só o placeholder do template - nunca é o que roda de fato. O
+          # CI/CD substitui pela tag do commit (SHA) antes de aplicar (ver
+          # .github/workflows/ci-cd.yml); "latest" de propósito evitado aqui porque é
+          # uma tag flutuante (sem rastreabilidade de qual versão está rodando).
+          image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local
           # IfNotPresent (não o default "Always" que a tag "latest" implicaria) - permite
           # usar uma imagem carregada localmente via "kind load docker-image" sem
           # depender do registry estar acessível (útil em dev local/smoke test de CI).
@@ -35,9 +42,11 @@ spec:
             requests:
               cpu: "100m"
               memory: "128Mi"
+              ephemeral-storage: "256Mi"
             limits:
               cpu: "500m"
               memory: "256Mi"
+              ephemeral-storage: "512Mi"
           readinessProbe:
             httpGet:
               path: /health

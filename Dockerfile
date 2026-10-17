@@ -42,7 +42,10 @@ EXPOSE 8000
 
 # usado pelo Docker/compose; no Kubernetes as probes do Deployment (k8s/deployment.yaml)
 # fazem o mesmo papel e são o que efetivamente controla religamento/tráfego dos pods.
+# chama o python do venv diretamente (já está no PATH) em vez de "uv run" - "uv run"
+# pode dar sync/instalar pacotes se o lockfile/venv não baterem, o que não deveria
+# acontecer num healthcheck (nem builda nada em runtime, nem depende de rede externa).
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-    CMD uv run python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 CMD ["sh", "-c", "uv run alembic upgrade head && uv run fastapi run app/main.py --host 0.0.0.0 --port 8000"]
