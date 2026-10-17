@@ -19,13 +19,14 @@ são provisionados pelo Terraform em `/infra` - ver `infra/README.md`.
 
 ## Imagem da aplicação
 
-Os manifestos apontam para `ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest`. Até
-existir uma pipeline publicando essa imagem (ver `.github/workflows/`), builde localmente
-e carregue direto no cluster kind:
+Os manifestos apontam para `ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local` - é só
+um placeholder de template (não "latest" de propósito, por rastreabilidade); o CI/CD
+substitui pela tag do commit (SHA) antes de aplicar (ver `.github/workflows/ci-cd.yml`).
+Para aplicar manualmente, builde localmente com essa mesma tag e carregue no cluster kind:
 
 ```bash
-docker build -t ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest ..
-kind load docker-image ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest --name oficina
+docker build -t ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local ..
+kind load docker-image ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local --name oficina
 ```
 
 `deployment.yaml`/`migrate-job.yaml` usam `imagePullPolicy: IfNotPresent` justamente para

@@ -18,7 +18,8 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: migrate
-          image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest
+          # ver o mesmo comentário em deployment.yaml sobre a tag ":local".
+          image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local
           imagePullPolicy: IfNotPresent
           command: ["uv", "run", "alembic", "upgrade", "head"]
           envFrom:

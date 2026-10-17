@@ -141,10 +141,10 @@ jobs:
             --from-literal=SEED_ATENDENTE_SENHA="atendente123" \
             --from-literal=SEED_MECANICO_SENHA="mecanico123"
 
-          sed "s|:latest|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
+          sed "s|:local|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
           kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
 
-          sed "s|:latest|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
+          sed "s|:local|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/hpa.yaml
           kubectl rollout status deployment/oficina-api -n oficina --timeout=120s
@@ -197,10 +197,10 @@ jobs:
           # "kubectl apply" falharia tentando mudar um campo que o Kubernetes não deixa
           # alterar num Job já existente.
           kubectl delete job oficina-migrate -n oficina --ignore-not-found
-          sed "s|:latest|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
+          sed "s|:local|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
           kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
 
-          sed "s|:latest|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
+          sed "s|:local|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
           kubectl rollout status deployment/oficina-api -n oficina --timeout=120s
 
       - name: Smoke test (/health)
