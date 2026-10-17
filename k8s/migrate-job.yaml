@@ -1,0 +1,24 @@
+# Roda "alembic upgrade head" uma única vez antes do Deployment da API subir. O
+# Dockerfile roda a migration no próprio CMD do container, o que é seguro com uma única
+# réplica mas vira corrida (múltiplos "alembic upgrade head" concorrentes) com o HPA
+# escalando a API para várias réplicas - por isso a migration é isolada aqui, e o
+# Deployment (deployment.yaml) sobrescreve o command do container para pular a migration.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oficina-migrate
+  namespace: oficina
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest
+          command: ["uv", "run", "alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: oficina-config
+            - secretRef:
+                name: oficina-secrets

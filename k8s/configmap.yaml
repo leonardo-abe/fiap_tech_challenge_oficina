@@ -1,0 +1,16 @@
+# Variáveis não sensíveis da aplicação, espelhando .env.example. Os valores secretos
+# (DATABASE_URL, JWT_SECRET_KEY, senhas de seed, credenciais SMTP) ficam em secret.yaml
+# (criado a partir de secret.yaml.example - ver k8s/README.md).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-config
+  namespace: oficina
+data:
+  APP_NAME: "Oficina Mecânica API"
+  ENVIRONMENT: "production"
+  JWT_EXPIRACAO_MINUTOS: "60"
+  NOTIFICACAO_BACKEND: "log"
+  SEED_ADMIN_EMAIL: "admin@oficina.com.br"
+  SEED_ATENDENTE_EMAIL: "atendente@oficina.com.br"
+  SEED_MECANICO_EMAIL: "mecanico@oficina.com.br"
