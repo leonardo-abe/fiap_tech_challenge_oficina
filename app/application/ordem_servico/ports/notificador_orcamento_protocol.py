@@ -10,3 +10,10 @@ class NotificadorOrcamentoProtocol(Protocol):
         destinatario_email: str,
         ordem: OrdemServicoOutput,
     ) -> None: ...
+
+    async def notificar_mudanca_status(
+        self,
+        destinatario_nome: str,
+        destinatario_email: str,
+        ordem: OrdemServicoOutput,
+    ) -> None: ...

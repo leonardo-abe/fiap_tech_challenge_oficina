@@ -55,6 +55,29 @@ class SmtpNotificadorOrcamento:
         ]
         return "\n".join(linhas)
 
+    async def notificar_mudanca_status(
+        self,
+        destinatario_nome: str,
+        destinatario_email: str,
+        ordem: OrdemServicoOutput,
+    ) -> None:
+        mensagem = self._montar_mensagem_status(destinatario_nome, destinatario_email, ordem)
+        await asyncio.to_thread(self._enviar, mensagem)
+
+    def _montar_mensagem_status(
+        self, destinatario_nome: str, destinatario_email: str, ordem: OrdemServicoOutput
+    ) -> EmailMessage:
+        mensagem = EmailMessage()
+        mensagem["Subject"] = f"Atualização da Ordem de Serviço #{ordem.id}: {ordem.status}"
+        mensagem["From"] = self._remetente
+        mensagem["To"] = destinatario_email
+        mensagem.set_content(
+            f"Olá, {destinatario_nome}!\n\n"
+            f"A sua Ordem de Serviço #{ordem.id} teve o status atualizado para: {ordem.status}.\n\n"
+            "Qualquer dúvida, entre em contato com a oficina."
+        )
+        return mensagem
+
     def _enviar(self, mensagem: EmailMessage) -> None:
         with smtplib.SMTP(self._host, self._port) as smtp:
             smtp.starttls()

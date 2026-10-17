@@ -15,10 +15,10 @@ from app.presentation.api.v1.ordens_servico.schemas import (
 router = APIRouter(prefix="/api/v1/ordens-servico", tags=["ordens-servico"])
 
 # Permissões seguem a tabela do desafio: diagnóstico/execução são do MECANICO,
-# aprovação de orçamento/entrega/cancelamento são do ATENDENTE, ADMIN pode tudo.
-# Consulta administrativa é liberada a qualquer perfil autenticado; a consulta por
-# status (GET /{ordem_id}/status) é a única rota pública, sem JWT - o desafio só exige
-# autenticação para as APIs administrativas.
+# entrega/cancelamento são do ATENDENTE, ADMIN pode tudo. Consulta administrativa é
+# liberada a qualquer perfil autenticado. A consulta de status e a aprovação/recusa de
+# orçamento são rotas públicas, sem JWT - o cliente decide o orçamento por fora do
+# sistema interno (ex.: link recebido por e-mail), provando posse da OS pelo documento.
 _admin_atendente = Depends(require_roles(Perfil.ADMIN, Perfil.ATENDENTE))
 _admin_mecanico = Depends(require_roles(Perfil.ADMIN, Perfil.MECANICO))
 _qualquer_perfil = Depends(require_roles(Perfil.ADMIN, Perfil.ATENDENTE, Perfil.MECANICO))
@@ -49,20 +49,26 @@ async def gerar_orcamento(
     return await controller.gerar_orcamento(ordem_id)
 
 
-@router.post("/{ordem_id}/orcamento/aprovar", dependencies=[_admin_atendente])
+@router.post("/{ordem_id}/orcamento/aprovar")
+@limiter.limit("20/minute")
 async def aprovar_orcamento(
+    request: Request,
     ordem_id: int,
+    documento: str = Query(..., description="CPF ou CNPJ do cliente dono da OS"),
     controller: OrdemServicoController = Depends(get_ordem_servico_controller),
 ) -> OrdemServicoSchema:
-    return await controller.aprovar_orcamento(ordem_id)
+    return await controller.aprovar_orcamento(ordem_id, documento)
 
 
-@router.post("/{ordem_id}/orcamento/reprovar", dependencies=[_admin_atendente])
+@router.post("/{ordem_id}/orcamento/reprovar")
+@limiter.limit("20/minute")
 async def reprovar_orcamento(
+    request: Request,
     ordem_id: int,
+    documento: str = Query(..., description="CPF ou CNPJ do cliente dono da OS"),
     controller: OrdemServicoController = Depends(get_ordem_servico_controller),
 ) -> OrdemServicoSchema:
-    return await controller.reprovar_orcamento(ordem_id)
+    return await controller.reprovar_orcamento(ordem_id, documento)
 
 
 @router.post("/{ordem_id}/execucao/finalizar", dependencies=[_admin_mecanico])

@@ -41,3 +41,24 @@ async def test_smtp_notificador_envia_mensagem_com_starttls_e_login():
     assert "Maria" in corpo
     assert "Troca de óleo" in corpo
     assert "140.00" in corpo
+
+
+async def test_smtp_notificador_envia_mudanca_de_status():
+    notificador = _montar_notificador()
+    ordem = ordem_output_padrao()
+    smtp_mock = MagicMock()
+    smtp_mock.__enter__.return_value = smtp_mock
+
+    with patch("smtplib.SMTP", return_value=smtp_mock):
+        await notificador.notificar_mudanca_status(
+            destinatario_nome="Maria",
+            destinatario_email="maria@x.com",
+            ordem=ordem,
+        )
+
+    smtp_mock.send_message.assert_called_once()
+    mensagem_enviada = smtp_mock.send_message.call_args[0][0]
+    assert mensagem_enviada["To"] == "maria@x.com"
+    assert "42" in mensagem_enviada["Subject"]
+    assert ordem.status in mensagem_enviada["Subject"]
+    assert "Maria" in mensagem_enviada.get_content()

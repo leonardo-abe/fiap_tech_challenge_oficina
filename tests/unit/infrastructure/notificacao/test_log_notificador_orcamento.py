@@ -17,3 +17,20 @@ async def test_log_notificador_registra_notificacao_sem_lancar_erro(caplog):
     [registro] = caplog.records
     assert "42" in registro.getMessage()
     assert "maria@x.com" in registro.getMessage()
+
+
+async def test_log_notificador_registra_mudanca_de_status(caplog):
+    notificador = LogNotificadorOrcamento()
+    ordem = ordem_output_padrao()
+
+    with caplog.at_level("INFO"):
+        await notificador.notificar_mudanca_status(
+            destinatario_nome="Maria",
+            destinatario_email="maria@x.com",
+            ordem=ordem,
+        )
+
+    [registro] = caplog.records
+    assert "42" in registro.getMessage()
+    assert ordem.status in registro.getMessage()
+    assert "maria@x.com" in registro.getMessage()

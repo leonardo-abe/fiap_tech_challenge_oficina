@@ -122,7 +122,7 @@ async def test_fluxo_completo_de_status(client):
     )
     aprovado = await client.post(
         f"/api/v1/ordens-servico/{ordem_id}/orcamento/aprovar",
-        headers=auth_headers(Perfil.ATENDENTE),
+        params={"documento": _CLIENTE["documento"]},
     )
     finalizado = await client.post(
         f"/api/v1/ordens-servico/{ordem_id}/execucao/finalizar",
@@ -206,11 +206,29 @@ async def test_reprovacao(client):
 
     resposta = await client.post(
         f"/api/v1/ordens-servico/{ordem_id}/orcamento/reprovar",
-        headers=auth_headers(Perfil.ATENDENTE),
+        params={"documento": _CLIENTE["documento"]},
     )
 
     assert resposta.status_code == 200
     assert resposta.json()["status"] == "REPROVADA"
+
+
+async def test_aprovacao_de_orcamento_com_documento_errado_retorna_404(client):
+    ordem = await _criar_ordem_com_itens(client)
+    ordem_id = ordem["id"]
+    await client.post(
+        f"/api/v1/ordens-servico/{ordem_id}/diagnostico", headers=auth_headers(Perfil.MECANICO)
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{ordem_id}/orcamento/gerar", headers=auth_headers(Perfil.MECANICO)
+    )
+
+    resposta = await client.post(
+        f"/api/v1/ordens-servico/{ordem_id}/orcamento/aprovar",
+        params={"documento": "52998224725"},
+    )
+
+    assert resposta.status_code == 404
 
 
 async def test_listar_e_buscar_administrativo(client):
@@ -238,6 +256,85 @@ async def test_listar_ordens_servico_respeita_limit(client):
 
     assert resposta.status_code == 200
     assert len(resposta.json()) == 1
+
+
+async def test_listagem_ordena_por_prioridade_de_status_e_exclui_finalizadas_e_entregues(client):
+    cliente_id, veiculo_id = await _criar_cliente_e_veiculo(client)
+    servico_id, peca_id = await _criar_servico_e_peca(client)
+
+    async def _nova_ordem() -> dict:
+        resposta = await client.post(
+            "/api/v1/ordens-servico/",
+            json={
+                "cliente_id": cliente_id,
+                "veiculo_id": veiculo_id,
+                "itens_servico": [{"servico_id": servico_id}],
+                "itens_peca": [{"peca_id": peca_id, "quantidade": 1}],
+            },
+            headers=auth_headers(Perfil.ATENDENTE),
+        )
+        return resposta.json()
+
+    recebida = await _nova_ordem()
+    diagnostico = await _nova_ordem()
+    aguardando = await _nova_ordem()
+    execucao = await _nova_ordem()
+    entregue = await _nova_ordem()
+
+    await client.post(
+        f"/api/v1/ordens-servico/{diagnostico['id']}/diagnostico",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+
+    await client.post(
+        f"/api/v1/ordens-servico/{aguardando['id']}/diagnostico",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{aguardando['id']}/orcamento/gerar",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+
+    await client.post(
+        f"/api/v1/ordens-servico/{execucao['id']}/diagnostico",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{execucao['id']}/orcamento/gerar",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{execucao['id']}/orcamento/aprovar",
+        params={"documento": _CLIENTE["documento"]},
+    )
+
+    await client.post(
+        f"/api/v1/ordens-servico/{entregue['id']}/diagnostico",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{entregue['id']}/orcamento/gerar",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{entregue['id']}/orcamento/aprovar",
+        params={"documento": _CLIENTE["documento"]},
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{entregue['id']}/execucao/finalizar",
+        headers=auth_headers(Perfil.MECANICO),
+    )
+    await client.post(
+        f"/api/v1/ordens-servico/{entregue['id']}/entrega", headers=auth_headers(Perfil.ATENDENTE)
+    )
+
+    resposta = await client.get("/api/v1/ordens-servico/", headers=auth_headers(Perfil.ADMIN))
+    ids_em_ordem = [item["id"] for item in resposta.json()]
+
+    # prioridade: Em Execução > Aguardando Aprovação > Diagnóstico > Recebida, mais
+    # antigas primeiro em caso de empate; Finalizada/Entregue não aparecem na listagem.
+    assert ids_em_ordem == [execucao["id"], aguardando["id"], diagnostico["id"], recebida["id"]]
+    assert entregue["id"] not in ids_em_ordem
 
 
 async def test_consulta_publica_de_status(client):

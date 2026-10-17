@@ -3,6 +3,8 @@ from decimal import Decimal
 import pytest
 
 from app.application.ordem_servico.use_cases import MudarStatusOrdemServicoUseCase
+from app.domain.cliente.entities import Cliente
+from app.domain.cliente.value_objects import Documento
 from app.domain.ordem_servico.entities import ItemPeca, OrdemServico
 from app.domain.ordem_servico.exceptions import (
     OrdemServicoNaoEncontradaError,
@@ -11,13 +13,31 @@ from app.domain.ordem_servico.exceptions import (
 from app.domain.ordem_servico.value_objects import StatusOS
 from app.domain.peca.entities import Peca
 from app.domain.shared.value_objects import Money
-from tests.unit.application.fakes import FakeOrdemServicoRepository, FakePecaRepository
+from tests.unit.application.fakes import (
+    FakeClienteRepository,
+    FakeNotificadorOrcamento,
+    FakeOrdemServicoRepository,
+    FakePecaRepository,
+)
+
+
+def _use_case(
+    ordem_repositorio=None, peca_repositorio=None, cliente_repositorio=None, notificador=None
+) -> tuple[MudarStatusOrdemServicoUseCase, FakeNotificadorOrcamento]:
+    notificador = notificador or FakeNotificadorOrcamento()
+    use_case = MudarStatusOrdemServicoUseCase(
+        ordem_repositorio or FakeOrdemServicoRepository(),
+        peca_repositorio or FakePecaRepository(),
+        cliente_repositorio or FakeClienteRepository(),
+        notificador,
+    )
+    return use_case, notificador
 
 
 async def test_mudar_status_sucesso():
     repositorio = FakeOrdemServicoRepository()
     ordem = await repositorio.criar(OrdemServico(cliente_id=1, veiculo_id=1))
-    use_case = MudarStatusOrdemServicoUseCase(repositorio, FakePecaRepository())
+    use_case, _ = _use_case(ordem_repositorio=repositorio)
 
     resultado = await use_case.executar(ordem.id, StatusOS.EM_DIAGNOSTICO)
 
@@ -25,7 +45,7 @@ async def test_mudar_status_sucesso():
 
 
 async def test_mudar_status_ordem_inexistente_levanta_erro():
-    use_case = MudarStatusOrdemServicoUseCase(FakeOrdemServicoRepository(), FakePecaRepository())
+    use_case, _ = _use_case()
 
     with pytest.raises(OrdemServicoNaoEncontradaError):
         await use_case.executar(999, StatusOS.EM_DIAGNOSTICO)
@@ -34,10 +54,33 @@ async def test_mudar_status_ordem_inexistente_levanta_erro():
 async def test_mudar_status_transicao_invalida_levanta_erro():
     repositorio = FakeOrdemServicoRepository()
     ordem = await repositorio.criar(OrdemServico(cliente_id=1, veiculo_id=1))
-    use_case = MudarStatusOrdemServicoUseCase(repositorio, FakePecaRepository())
+    use_case, _ = _use_case(ordem_repositorio=repositorio)
 
     with pytest.raises(TransicaoStatusInvalidaError):
         await use_case.executar(ordem.id, StatusOS.FINALIZADA)
+
+
+async def test_mudar_status_notifica_cliente_da_mudanca():
+    cliente_repositorio = FakeClienteRepository()
+    cliente = await cliente_repositorio.criar(
+        Cliente(
+            nome="Maria",
+            documento=Documento(valor="11144477735"),
+            email="maria@x.com",
+            telefone="11999998888",
+        )
+    )
+    ordem_repositorio = FakeOrdemServicoRepository()
+    ordem = await ordem_repositorio.criar(OrdemServico(cliente_id=cliente.id, veiculo_id=1))
+    use_case, notificador = _use_case(
+        ordem_repositorio=ordem_repositorio, cliente_repositorio=cliente_repositorio
+    )
+
+    await use_case.executar(ordem.id, StatusOS.EM_DIAGNOSTICO)
+
+    assert notificador.notificacoes_de_status == [
+        ("Maria", "maria@x.com", ordem.id, StatusOS.EM_DIAGNOSTICO.value)
+    ]
 
 
 async def _criar_ordem_com_peca_reservada(peca_repositorio, ordem_repositorio, status: StatusOS):
@@ -63,7 +106,7 @@ async def test_mudar_status_para_reprovada_estorna_estoque_das_pecas():
     ordem, peca = await _criar_ordem_com_peca_reservada(
         peca_repositorio, ordem_repositorio, StatusOS.AGUARDANDO_APROVACAO
     )
-    use_case = MudarStatusOrdemServicoUseCase(ordem_repositorio, peca_repositorio)
+    use_case, _ = _use_case(ordem_repositorio=ordem_repositorio, peca_repositorio=peca_repositorio)
 
     resultado = await use_case.executar(ordem.id, StatusOS.REPROVADA)
 
@@ -78,7 +121,7 @@ async def test_mudar_status_para_cancelada_estorna_estoque_das_pecas():
     ordem, peca = await _criar_ordem_com_peca_reservada(
         peca_repositorio, ordem_repositorio, StatusOS.EM_DIAGNOSTICO
     )
-    use_case = MudarStatusOrdemServicoUseCase(ordem_repositorio, peca_repositorio)
+    use_case, _ = _use_case(ordem_repositorio=ordem_repositorio, peca_repositorio=peca_repositorio)
 
     resultado = await use_case.executar(ordem.id, StatusOS.CANCELADA)
 
@@ -93,7 +136,7 @@ async def test_mudar_status_para_em_execucao_nao_mexe_no_estoque():
     ordem, peca = await _criar_ordem_com_peca_reservada(
         peca_repositorio, ordem_repositorio, StatusOS.AGUARDANDO_APROVACAO
     )
-    use_case = MudarStatusOrdemServicoUseCase(ordem_repositorio, peca_repositorio)
+    use_case, _ = _use_case(ordem_repositorio=ordem_repositorio, peca_repositorio=peca_repositorio)
 
     resultado = await use_case.executar(ordem.id, StatusOS.EM_EXECUCAO)
 
