@@ -109,10 +109,13 @@ jobs:
 
       - name: Instalar kind e kubectl
         run: |
-          curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
-          chmod +x /usr/local/bin/kind
-          curl -Lo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x /usr/local/bin/kubectl
+          # baixa no diretório de trabalho (sempre gravável) e só usa sudo para mover/
+          # marcar executável em /usr/local/bin - o runner hospedado não deixa escrever
+          # lá diretamente com o usuário sem privilégio.
+          curl -Lo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          sudo install -m 0755 kind /usr/local/bin/kind
+          curl -Lo kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -m 0755 kubectl /usr/local/bin/kubectl
 
       - name: Provisionar cluster kind + Postgres (Terraform)
         working-directory: infra
