@@ -25,3 +25,17 @@ class LogNotificadorOrcamento:
             destinatario_nome,
             destinatario_email,
         )
+
+    async def notificar_mudanca_status(
+        self,
+        destinatario_nome: str,
+        destinatario_email: str,
+        ordem: OrdemServicoOutput,
+    ) -> None:
+        logger.info(
+            "[notificacao-status] OS #%s - status alterado para %s, notificado %s <%s>",
+            ordem.id,
+            ordem.status,
+            destinatario_nome,
+            destinatario_email,
+        )

@@ -7,6 +7,7 @@ from app.application.ordem_servico.use_cases import (
     CalcularTempoMedioExecucaoUseCase,
     ConsultarStatusOrdemServicoUseCase,
     CriarOrdemServicoUseCase,
+    DecidirOrcamentoExternoUseCase,
     GerarOrcamentoUseCase,
     ListarOrdensServicoUseCase,
     MudarStatusOrdemServicoUseCase,
@@ -53,18 +54,6 @@ def get_criar_ordem_servico_use_case(
     )
 
 
-def get_mudar_status_ordem_servico_use_case(
-    ordem_servico_repository: SQLAlchemyOrdemServicoRepository = Depends(
-        get_ordem_servico_repository
-    ),
-    peca_repository: SQLAlchemyPecaRepository = Depends(get_peca_repository),
-) -> MudarStatusOrdemServicoUseCase:
-    return MudarStatusOrdemServicoUseCase(
-        ordem_servico_repository=ordem_servico_repository,
-        peca_repository=peca_repository,
-    )
-
-
 def get_notificador_orcamento() -> NotificadorOrcamentoProtocol:
     if settings.notificacao_backend == "smtp":
         return SmtpNotificadorOrcamento(
@@ -75,6 +64,38 @@ def get_notificador_orcamento() -> NotificadorOrcamentoProtocol:
             remetente=settings.smtp_remetente,
         )
     return LogNotificadorOrcamento()
+
+
+def get_mudar_status_ordem_servico_use_case(
+    ordem_servico_repository: SQLAlchemyOrdemServicoRepository = Depends(
+        get_ordem_servico_repository
+    ),
+    peca_repository: SQLAlchemyPecaRepository = Depends(get_peca_repository),
+    cliente_repository: SQLAlchemyClienteRepository = Depends(get_cliente_repository),
+    notificador: NotificadorOrcamentoProtocol = Depends(get_notificador_orcamento),
+) -> MudarStatusOrdemServicoUseCase:
+    return MudarStatusOrdemServicoUseCase(
+        ordem_servico_repository=ordem_servico_repository,
+        peca_repository=peca_repository,
+        cliente_repository=cliente_repository,
+        notificador=notificador,
+    )
+
+
+def get_decidir_orcamento_externo_use_case(
+    ordem_servico_repository: SQLAlchemyOrdemServicoRepository = Depends(
+        get_ordem_servico_repository
+    ),
+    cliente_repository: SQLAlchemyClienteRepository = Depends(get_cliente_repository),
+    mudar_status_use_case: MudarStatusOrdemServicoUseCase = Depends(
+        get_mudar_status_ordem_servico_use_case
+    ),
+) -> DecidirOrcamentoExternoUseCase:
+    return DecidirOrcamentoExternoUseCase(
+        ordem_servico_repository=ordem_servico_repository,
+        cliente_repository=cliente_repository,
+        mudar_status_use_case=mudar_status_use_case,
+    )
 
 
 def get_gerar_orcamento_use_case(
@@ -141,6 +162,9 @@ def get_ordem_servico_controller(
     calcular_tempo_medio_execucao_use_case: CalcularTempoMedioExecucaoUseCase = Depends(
         get_calcular_tempo_medio_execucao_use_case
     ),
+    decidir_orcamento_externo_use_case: DecidirOrcamentoExternoUseCase = Depends(
+        get_decidir_orcamento_externo_use_case
+    ),
 ) -> OrdemServicoController:
     return OrdemServicoController(
         criar_use_case=criar_use_case,
@@ -150,4 +174,5 @@ def get_ordem_servico_controller(
         buscar_use_case=buscar_use_case,
         consultar_status_use_case=consultar_status_use_case,
         calcular_tempo_medio_execucao_use_case=calcular_tempo_medio_execucao_use_case,
+        decidir_orcamento_externo_use_case=decidir_orcamento_externo_use_case,
     )

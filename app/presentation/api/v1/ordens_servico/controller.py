@@ -8,6 +8,7 @@ from app.application.ordem_servico.use_cases import (
     CalcularTempoMedioExecucaoUseCase,
     ConsultarStatusOrdemServicoUseCase,
     CriarOrdemServicoUseCase,
+    DecidirOrcamentoExternoUseCase,
     GerarOrcamentoUseCase,
     ListarOrdensServicoUseCase,
     MudarStatusOrdemServicoUseCase,
@@ -31,6 +32,7 @@ class OrdemServicoController:
         buscar_use_case: BuscarOrdemServicoUseCase,
         consultar_status_use_case: ConsultarStatusOrdemServicoUseCase,
         calcular_tempo_medio_execucao_use_case: CalcularTempoMedioExecucaoUseCase,
+        decidir_orcamento_externo_use_case: DecidirOrcamentoExternoUseCase,
     ) -> None:
         self._criar_use_case = criar_use_case
         self._mudar_status_use_case = mudar_status_use_case
@@ -39,6 +41,7 @@ class OrdemServicoController:
         self._buscar_use_case = buscar_use_case
         self._consultar_status_use_case = consultar_status_use_case
         self._calcular_tempo_medio_execucao_use_case = calcular_tempo_medio_execucao_use_case
+        self._decidir_orcamento_externo_use_case = decidir_orcamento_externo_use_case
 
     async def criar(self, dados: OrdemServicoCreateSchema) -> OrdemServicoSchema:
         resultado = await self._criar_use_case.executar(
@@ -63,11 +66,17 @@ class OrdemServicoController:
         resultado = await self._gerar_orcamento_use_case.executar(ordem_id)
         return OrdemServicoSchema.model_validate(resultado)
 
-    async def aprovar_orcamento(self, ordem_id: int) -> OrdemServicoSchema:
-        return await self._mudar_status(ordem_id, StatusOS.EM_EXECUCAO)
+    async def aprovar_orcamento(self, ordem_id: int, documento: str) -> OrdemServicoSchema:
+        resultado = await self._decidir_orcamento_externo_use_case.executar(
+            ordem_id, documento, aprovar=True
+        )
+        return OrdemServicoSchema.model_validate(resultado)
 
-    async def reprovar_orcamento(self, ordem_id: int) -> OrdemServicoSchema:
-        return await self._mudar_status(ordem_id, StatusOS.REPROVADA)
+    async def reprovar_orcamento(self, ordem_id: int, documento: str) -> OrdemServicoSchema:
+        resultado = await self._decidir_orcamento_externo_use_case.executar(
+            ordem_id, documento, aprovar=False
+        )
+        return OrdemServicoSchema.model_validate(resultado)
 
     async def finalizar_execucao(self, ordem_id: int) -> OrdemServicoSchema:
         return await self._mudar_status(ordem_id, StatusOS.FINALIZADA)

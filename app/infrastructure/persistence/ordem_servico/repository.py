@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,6 +10,16 @@ from app.infrastructure.persistence.ordem_servico.models import (
     ItemServicoModel,
     OrdemServicoModel,
 )
+
+# a listagem administrativa prioriza OS mais "urgentes" (mais perto da entrega) primeiro;
+# status fora do mapa (FINALIZADA/ENTREGUE) nunca aparecem aqui - são excluídos abaixo.
+_PRIORIDADE_STATUS_LISTAGEM = {
+    StatusOS.EM_EXECUCAO: 0,
+    StatusOS.AGUARDANDO_APROVACAO: 1,
+    StatusOS.EM_DIAGNOSTICO: 2,
+    StatusOS.RECEBIDA: 3,
+}
+_STATUS_EXCLUIDOS_DA_LISTAGEM = (StatusOS.FINALIZADA, StatusOS.ENTREGUE)
 
 
 class SQLAlchemyOrdemServicoRepository:
@@ -53,13 +63,27 @@ class SQLAlchemyOrdemServicoRepository:
         return self._to_entity(model) if model else None
 
     async def listar(self, limit: int = 50, offset: int = 0) -> list[OrdemServico]:
+        prioridade = case(
+            *(
+                (OrdemServicoModel.status == status.value, prioridade)
+                for status, prioridade in _PRIORIDADE_STATUS_LISTAGEM.items()
+            ),
+            else_=len(_PRIORIDADE_STATUS_LISTAGEM),
+        )
         resultado = await self._session.execute(
             select(OrdemServicoModel)
             .options(
                 selectinload(OrdemServicoModel.itens_servico),
                 selectinload(OrdemServicoModel.itens_peca),
             )
-            .order_by(OrdemServicoModel.recebida_em.desc())
+            .where(
+                OrdemServicoModel.status.notin_(
+                    [status.value for status in _STATUS_EXCLUIDOS_DA_LISTAGEM]
+                )
+            )
+            # exclusão lógica: finalizadas/entregues continuam no banco e acessíveis via
+            # buscar_por_id, só não aparecem nesta listagem administrativa.
+            .order_by(prioridade, OrdemServicoModel.recebida_em.asc())
             .limit(limit)
             .offset(offset)
         )

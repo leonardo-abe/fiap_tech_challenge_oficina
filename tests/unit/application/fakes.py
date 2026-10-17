@@ -221,6 +221,12 @@ class FakeTokenProvider:
 class FakeNotificadorOrcamento:
     def __init__(self) -> None:
         self.notificacoes_enviadas: list[tuple[str, str, int]] = []
+        self.notificacoes_de_status: list[tuple[str, str, int, str]] = []
 
     async def notificar_orcamento_gerado(self, destinatario_nome, destinatario_email, ordem):
         self.notificacoes_enviadas.append((destinatario_nome, destinatario_email, ordem.id))
+
+    async def notificar_mudanca_status(self, destinatario_nome, destinatario_email, ordem):
+        self.notificacoes_de_status.append(
+            (destinatario_nome, destinatario_email, ordem.id, ordem.status)
+        )
