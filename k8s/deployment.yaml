@@ -16,6 +16,10 @@ spec:
       containers:
         - name: api
           image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:latest
+          # IfNotPresent (não o default "Always" que a tag "latest" implicaria) - permite
+          # usar uma imagem carregada localmente via "kind load docker-image" sem
+          # depender do registry estar acessível (útil em dev local/smoke test de CI).
+          imagePullPolicy: IfNotPresent
           # sobrescreve o CMD do Dockerfile (que roda "alembic upgrade head" antes de
           # subir) - a migration já rodou no Job oficina-migrate; rodá-la de novo aqui,
           # em paralelo em cada réplica/scale-up do HPA, seria uma corrida.
