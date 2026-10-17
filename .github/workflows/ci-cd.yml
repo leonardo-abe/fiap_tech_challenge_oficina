@@ -1,0 +1,159 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check app tests
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: oficina_test
+          POSTGRES_PASSWORD: oficina_test
+          POSTGRES_DB: oficina_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U oficina_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # TEST_DATABASE_URL é o que tests/integration/conftest.py usa de fato para falar
+      # com o Postgres de serviço acima. DATABASE_URL não é usado por nenhum teste (a
+      # suíte sobrescreve get_session com a engine de TEST_DATABASE_URL), mas precisa
+      # existir com um valor qualquer porque app.shared.settings.Settings exige todo
+      # campo preenchido já na importação do app (ver app/main.py).
+      TEST_DATABASE_URL: postgresql+asyncpg://oficina_test:oficina_test@localhost:5433/oficina_test
+      DATABASE_URL: postgresql+asyncpg://oficina_test:oficina_test@localhost:5433/oficina_test
+      APP_NAME: "Oficina Mecânica API"
+      ENVIRONMENT: test
+      JWT_SECRET_KEY: ci-apenas-para-testes-nao-usar-em-producao-32b
+      JWT_EXPIRACAO_MINUTOS: "60"
+      SEED_ADMIN_EMAIL: admin@oficina.com.br
+      SEED_ADMIN_SENHA: admin123
+      SEED_ATENDENTE_EMAIL: atendente@oficina.com.br
+      SEED_ATENDENTE_SENHA: atendente123
+      SEED_MECANICO_EMAIL: mecanico@oficina.com.br
+      SEED_MECANICO_SENHA: mecanico123
+      NOTIFICACAO_BACKEND: log
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=90
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Sobe um cluster kind efêmero dentro do próprio runner (via o mesmo Terraform de
+  # /infra, exercitando-o de verdade) só para validar que a imagem recém-publicada
+  # sobe de ponta a ponta no Kubernetes - banco, migration, Deployment e /health. O
+  # cluster inteiro é descartado com o runner ao fim do job; não é infraestrutura
+  # persistente (essa é levantada localmente por quem for gravar a demonstração/HPA,
+  # já que o runner não é alcançável de fora - ver infra/README.md e k8s/README.md).
+  deploy-e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.6"
+
+      - name: Instalar kind e kubectl
+        run: |
+          curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          chmod +x /usr/local/bin/kind
+          curl -Lo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x /usr/local/bin/kubectl
+
+      - name: Provisionar cluster kind + Postgres (Terraform)
+        working-directory: infra
+        run: |
+          terraform init
+          # ver infra/README.md: o provider kubernetes só consegue ler o kubeconfig
+          # depois que o cluster existe, por isso a 1ª apply fica restrita a só isso.
+          terraform apply -auto-approve -target=null_resource.kind_cluster -var="postgres_password=${{ github.run_id }}"
+          terraform apply -auto-approve -var="postgres_password=${{ github.run_id }}"
+          echo "KUBECONFIG=$PWD/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Carregar imagem no cluster
+        run: |
+          docker pull ${{ env.IMAGE }}:${{ github.sha }}
+          kind load docker-image ${{ env.IMAGE }}:${{ github.sha }} --name oficina
+
+      - name: Aplicar manifestos da aplicação
+        run: |
+          DB_URL="$(terraform -chdir=infra output -raw postgres_connection_string)"
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl create secret generic oficina-secrets -n oficina \
+            --from-literal=DATABASE_URL="$DB_URL" \
+            --from-literal=JWT_SECRET_KEY="ci-ephemeral-jwt-secret-de-32-bytes-ou-mais" \
+            --from-literal=SEED_ADMIN_SENHA="admin123" \
+            --from-literal=SEED_ATENDENTE_SENHA="atendente123" \
+            --from-literal=SEED_MECANICO_SENHA="mecanico123"
+
+          sed "s|:latest|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
+          kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
+
+          sed "s|:latest|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/hpa.yaml
+          kubectl rollout status deployment/oficina-api -n oficina --timeout=120s
+
+      - name: Smoke test (/health)
+        run: |
+          kubectl port-forward svc/oficina-api 8000:8000 -n oficina &
+          sleep 5
+          curl -sf http://localhost:8000/health
+
+      - name: Destruir cluster
+        if: always()
+        working-directory: infra
+        run: terraform destroy -auto-approve -var="postgres_password=${{ github.run_id }}"

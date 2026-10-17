@@ -3,9 +3,16 @@
 ## Descrição
 
 Backend do **Sistema Integrado de Atendimento e Execução de Serviços** de uma oficina
-mecânica de médio porte — projeto da Fase 1 do Tech Challenge (Pós-Tech Software
-Architecture, FIAP). Substitui o controle manual/planilhas por uma API que cobre
-atendimento, diagnóstico, execução de serviços e entrega de veículos.
+mecânica de médio porte — Tech Challenge (Pós-Tech Software Architecture, FIAP).
+Substitui o controle manual/planilhas por uma API que cobre atendimento, diagnóstico,
+execução de serviços e entrega de veículos.
+
+**Fase 2** evolui a aplicação da Fase 1 para suportar o crescimento da oficina (novas
+unidades, picos de OS) com qualidade, resiliência e escalabilidade: a API ganhou alguns
+ajustes (ver [Funcionalidades principais](#funcionalidades-principais)) e a infraestrutura
+passou a ser containerizada, orquestrada em Kubernetes com autoscaling (HPA), provisionada
+como código (Terraform) e entregue por uma pipeline de CI/CD — ver
+[Infraestrutura e deploy (Fase 2)](#infraestrutura-e-deploy-fase-2).
 
 ## Visão geral
 
@@ -49,6 +56,10 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 - **Rate limiting**: `slowapi`
 - **Gerenciador de pacotes**: [uv](https://docs.astral.sh/uv/)
 - **Containers**: Docker + Docker Compose
+- **Orquestração**: Kubernetes (manifestos em [`k8s/`](k8s/)), com `HorizontalPodAutoscaler`
+- **Infraestrutura como código**: Terraform ([`infra/`](infra/)) — cluster Kubernetes local
+  (kind) + Postgres
+- **CI/CD**: GitHub Actions ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml))
 - **Testes**: pytest, `pytest-asyncio`, `pytest-cov`
 - **Qualidade/segurança**: ruff (lint), bandit (SAST), pip-audit (SCA), SonarQube
 
@@ -60,7 +71,7 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 | Veículos | CRUD, placa validada, vinculado a um cliente, busca direta por placa (`GET /veiculos/placa/{placa}`), listagem paginada e filtrável por `cliente_id` |
 | Serviços | CRUD do catálogo, listagem paginada e filtrável por nome (busca parcial, case-insensitive) |
 | Peças | CRUD com controle de estoque (baixa/reposição atômica), listagem paginada e filtrável por nome (busca parcial, case-insensitive) |
-| Ordens de Serviço | Criação com orçamento automático, máquina de estados completa, notificação de orçamento por e-mail, consulta pública de status, relatório de tempo médio de execução, listagem paginada |
+| Ordens de Serviço | Criação com orçamento automático, máquina de estados completa, notificação por e-mail ao cliente a cada mudança de status, aprovação/recusa de orçamento pelo próprio cliente (sem login, autenticado por CPF/CNPJ), consulta pública de status, listagem priorizando as OS mais urgentes (Em Execução > Aguardando Aprovação > Diagnóstico > Recebida, excluindo Finalizadas/Entregues), relatório de tempo médio de execução |
 | Usuários/Auth | Login JWT, RBAC por perfil (`ADMIN`/`ATENDENTE`/`MECANICO`) |
 
 Todas as listagens (`GET /.../`) aceitam `limit` (padrão 50, máx. 200) e `offset` (padrão 0)
@@ -163,14 +174,14 @@ Cobertura (`uv run pytest --cov=app --cov-report=term-missing`), rodada mais rec
 ```
 Camada          Statements   Miss   Cobertura
 domain          341          0      100.0%
-application     756          0      100.0%
-infrastructure  416          7      98.3%
-presentation    702          34     95.2%
-shared          34           0      100.0%
+application     826          0      100.0%
+infrastructure  448          11     97.5%
+presentation    729          38     94.8%
+shared          38           0      100.0%
 ------------------------------------------
-TOTAL           2278         42     98%
+TOTAL           2428         50     98%
 
-267 passed, 3 warnings in 15.62s
+313 passed, 5 warnings in 18.34s
 ```
 
 </details>
@@ -178,6 +189,71 @@ TOTAL           2278         42     98%
 Domínio e aplicação (onde vive a regra de negócio) em 100% — as lacunas restantes são
 principalmente ramos de tratamento de exceção em controllers e trechos de bootstrap de
 infraestrutura, cobertos indiretamente pelos testes de integração.
+
+## Infraestrutura e deploy (Fase 2)
+
+### Arquitetura proposta
+
+```mermaid
+flowchart LR
+    subgraph CICD["GitHub Actions (push/PR na main)"]
+        direction LR
+        Lint[lint] --> Test[test] --> Build["build\n+ push imagem (GHCR)"] --> E2E["deploy-e2e\ncluster kind efêmero no runner"]
+    end
+
+    Build -->|"docker push"| GHCR[("GHCR\nghcr.io/.../fiap_tech_challenge_oficina")]
+
+    subgraph Infra["Terraform (infra/)"]
+        Cluster["cluster kind local"]
+        PG[("Postgres\n(Deployment + PVC)")]
+        Cluster --> PG
+    end
+
+    subgraph K8s["Manifestos da aplicação (k8s/)"]
+        direction TB
+        Migrate["Job: migrate\n(alembic upgrade head)"]
+        Deploy["Deployment: oficina-api\n2-10 réplicas"]
+        Svc["Service: oficina-api\n(ClusterIP)"]
+        HPA["HorizontalPodAutoscaler\nalvo 70% CPU"]
+        Migrate --> Deploy
+        HPA -. escala .-> Deploy
+        Svc --> Deploy
+    end
+
+    GHCR --> Deploy
+    Deploy --> PG
+    Migrate --> PG
+    Cliente(["Cliente / Postman / Swagger"]) -->|"kubectl port-forward"| Svc
+```
+
+- **Componentes da aplicação**: a mesma API FastAPI da Fase 1 (Clean Architecture),
+  agora rodando como `Deployment` com múltiplas réplicas atrás de um `Service`.
+- **Infraestrutura provisionada**: `infra/` (Terraform) cria o cluster Kubernetes local
+  (kind) e o Postgres dentro dele; `k8s/` aplica os manifestos da própria API (Job de
+  migration, Deployment, Service, HPA) nesse cluster.
+- **Fluxo de deploy**: a cada push/PR na `main`, o GitHub Actions roda lint → testes →
+  build/push da imagem (GHCR) → um deploy de ponta a ponta num cluster kind **efêmero
+  dentro do próprio runner** (sobe, aplica tudo, faz smoke test em `/health`, derruba).
+  Esse cluster de CI não é persistente nem acessível de fora — é só validação
+  automatizada. Para rodar de verdade (e ver o HPA escalando sob carga, demonstrado no
+  vídeo), o cluster kind é levantado **localmente** com o mesmo Terraform.
+
+### Executar
+
+| O quê | Onde |
+|---|---|
+| Rodar a aplicação localmente (Docker Compose) | seção [Dados iniciais para uso](#dados-iniciais-para-uso) acima |
+| Provisionar o cluster Kubernetes local + banco | [`infra/README.md`](infra/README.md) (`terraform apply`) |
+| Aplicar os manifestos da aplicação no cluster | [`k8s/README.md`](k8s/README.md) (`kubectl apply -f k8s/`) |
+| Pipeline de CI/CD | [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) |
+
+### Collection da API e vídeo demonstrativo
+
+- Collection completa das APIs: Swagger UI (`/docs`) — ver
+  [Documentação da API](#documentação-da-api). _(Link do Postman/Swagger publicado: a
+  preencher na entrega.)_
+- Vídeo demonstrativo (deploy, execução do CI/CD, consumo das APIs, escalabilidade via
+  HPA): _a preencher na entrega._
 
 ## Segurança
 

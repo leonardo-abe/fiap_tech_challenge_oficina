@@ -28,17 +28,20 @@ cp terraform.tfvars.example terraform.tfvars
 # edite terraform.tfvars com uma senha de verdade
 
 terraform init
-terraform apply
-terraform apply   # sim, de novo - ver nota abaixo
+terraform apply -target=null_resource.kind_cluster   # 1/2: só o cluster
+terraform apply                                       # 2/2: namespace + Postgres
 ```
 
-> **Por que rodar `apply` duas vezes?** O provider `kubernetes` só consegue ler o
-> kubeconfig depois que o cluster kind existe, mas ele é configurado/validado já na
-> primeira passada do mesmo `apply` - então a primeira execução cria o cluster (e o
-> arquivo `kubeconfig`) mas falha ao criar os recursos do Postgres com um erro de
-> conexão. A segunda execução já encontra o kubeconfig pronto e aplica o restante sem
+> **Por que em duas etapas?** O provider `kubernetes` só consegue ler o kubeconfig
+> depois que o cluster kind existe, mas ele é configurado/validado já na primeira
+> passada de um único `apply` - rodar tudo de uma vez faz os recursos do Postgres
+> falharem com erro de conexão, porque o kubeconfig ainda não existe no momento em que
+> o provider tenta usá-lo. O primeiro `apply`, restrito a `null_resource.kind_cluster`
+> via `-target`, cria só o cluster (e o kubeconfig); o segundo aplica o restante sem
 > problema. É uma limitação conhecida de providers Terraform que dependem de outro
-> recurso criado na mesma `apply` (não é um bug deste módulo).
+> recurso criado na mesma `apply` (não é um bug deste módulo) - por isso o uso de
+> `-target` aqui é intencional, apesar do aviso do Terraform de que não é para uso
+> rotineiro.
 
 Isso cria o cluster `oficina` e escreve o kubeconfig em `kubeconfig` (não commitado).
 Para usar `kubectl`/`k8s/README.md` a partir daqui:
