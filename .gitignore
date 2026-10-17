@@ -13,6 +13,11 @@ venv/
 
 # Environment variables (real secrets never go into git)
 .env
+k8s/secret.yaml
+infra/terraform.tfvars
+infra/*.tfstate
+infra/*.tfstate.*
+infra/.terraform/
 
 # Test coverage
 .coverage
