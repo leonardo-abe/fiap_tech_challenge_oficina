@@ -6,16 +6,11 @@ terraform {
       source  = "hashicorp/null"
       version = "~> 3.2"
     }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.31"
-    }
   }
 }
 
-# o provider só precisa do kubeconfig gerado pelo "kind create cluster" em main.tf; a
-# conexão real só acontece quando algum recurso kubernetes_* é aplicado (depends_on
-# garante que isso só ocorre depois que o cluster existe).
-provider "kubernetes" {
-  config_path = var.kubeconfig_path
-}
+# nenhum provider além do "null" é necessário - tudo (cluster kind, namespace, secret,
+# Postgres) é criado via "kubectl"/"kind" executados por local-exec (ver main.tf e
+# postgres.tf), não por recursos típicos de um provider que precisaria se conectar à
+# API do cluster já na configuração do provider (o que exigiria o cluster existir
+# antes mesmo do primeiro "terraform apply" rodar).

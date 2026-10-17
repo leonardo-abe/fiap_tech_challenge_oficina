@@ -5,6 +5,6 @@ output "kubeconfig_path" {
 
 output "postgres_connection_string" {
   description = "DATABASE_URL para colocar em k8s/secret.yaml (ver k8s/README.md)."
-  value       = "postgresql+asyncpg://${var.postgres_user}:${var.postgres_password}@postgres.${kubernetes_namespace.oficina.metadata[0].name}.svc.cluster.local:5432/${var.postgres_db}"
+  value       = "postgresql+asyncpg://${var.postgres_user}:${var.postgres_password}@postgres.oficina.svc.cluster.local:5432/${var.postgres_db}"
   sensitive   = true
 }
