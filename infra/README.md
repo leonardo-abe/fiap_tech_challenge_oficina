@@ -9,11 +9,7 @@ dele. A aplicação em si (API) é aplicada separadamente via `kubectl apply -f 
 | Recurso | O quê |
 |---|---|
 | `null_resource.kind_cluster` | Cluster kind local (via CLI `kind`), definido por `kind-config.yaml` |
-| `kubernetes_namespace.oficina` | Namespace `oficina` |
-| `kubernetes_secret.postgres` | Credenciais do Postgres |
-| `kubernetes_persistent_volume_claim.postgres` | Volume persistente de 1Gi pros dados do Postgres |
-| `kubernetes_deployment.postgres` | Postgres 16 (1 réplica) |
-| `kubernetes_service.postgres` | Service `postgres` (porta 5432) - é o host usado em `DATABASE_URL` |
+| `null_resource.postgres` | Namespace `oficina`, Secret de credenciais, e o Postgres propriamente dito (`postgres.yaml`: PVC, Deployment, Service) - tudo via `kubectl` |
 
 ## Pré-requisitos
 
@@ -28,20 +24,14 @@ cp terraform.tfvars.example terraform.tfvars
 # edite terraform.tfvars com uma senha de verdade
 
 terraform init
-terraform apply -target=null_resource.kind_cluster   # 1/2: só o cluster
-terraform apply                                       # 2/2: namespace + Postgres
+terraform apply
 ```
 
-> **Por que em duas etapas?** O provider `kubernetes` só consegue ler o kubeconfig
-> depois que o cluster kind existe, mas ele é configurado/validado já na primeira
-> passada de um único `apply` - rodar tudo de uma vez faz os recursos do Postgres
-> falharem com erro de conexão, porque o kubeconfig ainda não existe no momento em que
-> o provider tenta usá-lo. O primeiro `apply`, restrito a `null_resource.kind_cluster`
-> via `-target`, cria só o cluster (e o kubeconfig); o segundo aplica o restante sem
-> problema. É uma limitação conhecida de providers Terraform que dependem de outro
-> recurso criado na mesma `apply` (não é um bug deste módulo) - por isso o uso de
-> `-target` aqui é intencional, apesar do aviso do Terraform de que não é para uso
-> rotineiro.
+Uma única `apply` já cria o cluster **e** o Postgres: nada aqui usa o provider
+`kubernetes` do Terraform (que exigiria o cluster existir antes mesmo da primeira
+`apply` rodar, forçando duas passadas). O cluster (`kind`) e o banco (`kubectl`) são
+criados por comandos de CLI executados em sequência via `local-exec`, na ordem certa,
+dentro da mesma `apply`.
 
 Isso cria o cluster `oficina` e escreve o kubeconfig em `kubeconfig` (não commitado).
 Para usar `kubectl`/`k8s/README.md` a partir daqui:

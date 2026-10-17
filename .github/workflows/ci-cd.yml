@@ -126,9 +126,6 @@ jobs:
         working-directory: infra
         run: |
           terraform init
-          # ver infra/README.md: o provider kubernetes só consegue ler o kubeconfig
-          # depois que o cluster existe, por isso a 1ª apply fica restrita a só isso.
-          terraform apply -auto-approve -target=null_resource.kind_cluster -var="postgres_password=${{ github.run_id }}"
           terraform apply -auto-approve -var="postgres_password=${{ github.run_id }}"
           echo "KUBECONFIG=$PWD/kubeconfig" >> "$GITHUB_ENV"
 
