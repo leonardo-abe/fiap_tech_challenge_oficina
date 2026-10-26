@@ -265,9 +265,16 @@ flowchart LR
 
 ### Collection da API e vídeo demonstrativo
 
-- Collection completa das APIs: Swagger UI (`/docs`) — ver
-  [Documentação da API](#documentação-da-api). _(Link do Postman/Swagger publicado: a
-  preencher na entrega.)_
+- **Collection completa das APIs**: [`docs/openapi.json`](docs/openapi.json) — especificação
+  OpenAPI gerada direto do código (`app.openapi()`), sempre em sincronia com os endpoints
+  reais. Importe no Postman (**File → Import** → selecione o arquivo) para gerar a
+  collection completa automaticamente, ou acesse o Swagger UI (`/docs`) de qualquer
+  ambiente em execução (local ou nuvem - ver [Documentação da API](#documentação-da-api)).
+  Não existe um link fixo publicado de propósito: a URL pública muda a cada vez que o
+  cluster é recriado (ver [Infraestrutura e deploy](#infraestrutura-e-deploy-fase-2)) -
+  ao importar a collection, basta ajustar a variável de `base_url` para onde a API
+  estiver rodando no momento (`http://localhost:8000` local, ou a URL do Load Balancer
+  do deploy atual, disponível no resumo da execução do job `deploy` no GitHub Actions).
 - Vídeo demonstrativo (deploy, execução do CI/CD, consumo das APIs, escalabilidade via
   HPA): _a preencher na entrega._
 
