@@ -199,13 +199,13 @@ flowchart LR
     subgraph CICD["GitHub Actions (push na main)"]
         direction LR
         Lint[lint] --> Test[test] --> Build["build\n+ push imagem (GHCR)"]
-        Build --> Deploy["deploy\n(runner hospedado)\nterraform apply + kubectl apply"]
+        Build --> Deploy["deploy\n(runner hospedado)\nkubectl apply"]
     end
 
     Build -->|"docker push"| GHCR[("GHCR\nghcr.io/.../fiap_tech_challenge_oficina")]
 
     subgraph AWS["AWS Academy Learner Lab"]
-        subgraph Infra["Terraform (infra/)"]
+        subgraph Infra["Terraform (infra/) - rodado uma vez, manualmente"]
             Cluster["Cluster EKS\n+ node group (EC2)"]
             PG[("Postgres\n(Deployment + PVC)")]
             Cluster --> PG
@@ -223,7 +223,6 @@ flowchart LR
         end
     end
 
-    Deploy -->|"terraform apply"| Cluster
     Deploy -->|"kubectl apply"| K8s
     GHCR --> ApiDeploy
     ApiDeploy --> PG
@@ -234,16 +233,17 @@ flowchart LR
 - **Componentes da aplicação**: a mesma API FastAPI da Fase 1 (Clean Architecture),
   agora rodando como `Deployment` com múltiplas réplicas atrás de um `Service` público.
 - **Infraestrutura provisionada**: `infra/` (Terraform) provisiona um **cluster EKS real**
-  na AWS (AWS Academy Learner Lab) com node group (EC2) e o Postgres dentro dele; `k8s/`
-  aplica os manifestos da própria API (Job de migration, Deployment, Service
-  `LoadBalancer`, HPA) nesse cluster.
+  na AWS (AWS Academy Learner Lab) com node group (EC2) e o Postgres dentro dele - rodado
+  manualmente, uma única vez (`terraform apply`); `k8s/` aplica os manifestos da própria
+  API (Job de migration, Deployment, Service `LoadBalancer`, HPA) nesse cluster.
 - **Fluxo de deploy**: todo push na `main` roda lint → testes → build/push da imagem
   (GHCR) e então o job `deploy` (runner hospedado comum do GitHub — **não precisa de
   runner self-hosted**, porque o alvo é um cluster na nuvem alcançável pela internet):
-  autentica na AWS, roda `terraform apply` (idempotente — só provisiona na primeira vez,
-  depois só confirma que nada mudou) e aplica os manifestos com a tag da imagem recém
-  publicada. É Continuous Deployment de verdade: o ambiente fica no ar entre um push e
-  outro, acessível publicamente pelo IP do Load Balancer, e é nele que roda a
+  autentica na AWS, aponta o `kubectl` para o cluster já existente
+  (`aws eks update-kubeconfig`) e aplica os manifestos com a tag da imagem recém
+  publicada - sem rodar Terraform (um deploy normal só troca a imagem da aplicação, nunca
+  a infraestrutura). É Continuous Deployment de verdade: o ambiente fica no ar entre um
+  push e outro, acessível publicamente pelo IP do Load Balancer, e é nele que roda a
   demonstração do vídeo (inclusive o HPA escalando sob carga).
   ⚠️ **As credenciais do AWS Academy expiram em poucas horas** — antes de cada execução
   (ou sempre que a sessão expirar), é preciso atualizar os secrets do repositório com as
@@ -255,7 +255,7 @@ flowchart LR
 | O quê | Onde |
 |---|---|
 | Rodar a aplicação localmente (Docker Compose) | seção [Dados iniciais para uso](#dados-iniciais-para-uso) acima |
-| Provisionar o cluster EKS + banco na AWS | [`infra/README.md`](infra/README.md) (`terraform apply`) — inclui credenciais do Academy e bootstrap do backend remoto |
+| Provisionar o cluster EKS + banco na AWS (manual, uma vez) | [`infra/README.md`](infra/README.md) (`terraform apply`) — inclui credenciais do Academy |
 | Aplicar os manifestos da aplicação no cluster | [`k8s/README.md`](k8s/README.md) (`kubectl apply -f k8s/`) |
 | Pipeline de CI/CD | [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) |
 | **Destruir tudo (evitar cobrança no lab)** | [`infra/README.md`](infra/README.md#-destruir-tudo-importante--evita-cobrança-continuada-no-aws-academy) |

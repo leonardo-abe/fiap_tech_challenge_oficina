@@ -1,16 +1,11 @@
 terraform {
   required_version = ">= 1.5.0"
 
-  # state remoto (S3 + DynamoDB) - diferente do cluster kind efêmero de antes, o cluster
-  # EKS é um recurso real e persistente na AWS: sem state remoto, cada execução do CI
-  # (numa VM nova do runner hospedado, sem state local) tentaria criar o cluster de novo
-  # e falharia porque ele já existe. O bucket/tabela são criados manualmente uma única vez
-  # (ver infra/README.md) - o próprio backend não pode ser gerenciado por este Terraform
-  # (mesmo problema de ovo-e-galinha de um backend se auto-provisionar).
-  backend "s3" {
-    key     = "oficina/terraform.tfstate"
-    encrypt = true
-  }
+  # state local (sem backend remoto) de propósito - este Terraform roda manualmente, uma
+  # única vez (ver infra/README.md), para provisionar o cluster/node group/Postgres. O
+  # CI/CD não executa "terraform apply": um deploy normal só troca a imagem da aplicação
+  # via kubectl (ver .github/workflows/ci-cd.yml), nunca mexe na infraestrutura - por
+  # isso não há necessidade de state remoto compartilhado entre execuções.
 
   required_providers {
     aws = {

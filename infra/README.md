@@ -31,31 +31,23 @@ export AWS_DEFAULT_REGION="us-east-1"
 
 Se o CI/CD (GitHub Actions) for rodar contra essa mesma conta, esses mesmos 3 valores
 também precisam ser atualizados nos **Secrets** do repositório (`Settings → Secrets and
-variables → Actions`): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`.
+variables → Actions`): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`
+(ver a lista completa de secrets necessários em `../k8s/README.md`).
 
 ## Pré-requisitos
 
 - Acesso a um AWS Academy Learner Lab iniciado (credenciais exportadas acima).
 - CLIs `aws`, `kubectl` e `terraform` instaladas.
 
-## Bootstrap do backend remoto (uma única vez)
+## Este Terraform roda manualmente, uma única vez
 
-O state do Terraform fica num bucket S3 (não em disco) - diferente do cluster `kind`
-efêmero usado antes, o cluster EKS é um recurso real e persistente: sem state remoto,
-cada execução do CI (numa VM nova) tentaria recriar o cluster do zero e falharia
-(ele já existe na AWS). Esse bucket não pode ser criado pelo próprio Terraform (mesmo
-problema de ovo-e-galinha de um backend se auto-provisionar) - crie uma vez, manualmente:
-
-```bash
-aws s3 mb s3://oficina-tfstate-$(aws sts get-caller-identity --query Account --output text) --region us-east-1
-```
-
-Depois, aponte o backend para esse bucket (substitua pelo nome gerado acima):
-
-```bash
-cd infra
-terraform init -backend-config="bucket=oficina-tfstate-<account_id>" -backend-config="region=us-east-1"
-```
+Diferente do `lint`/`test`/`build`, o provisionamento de infraestrutura **não** faz parte
+do pipeline do GitHub Actions: você (ou quem for demonstrar o projeto) roda os comandos
+abaixo manualmente, uma vez, para criar o cluster. Depois disso, o CI/CD só troca a
+imagem da aplicação (`kubectl apply`) a cada push - nunca recria ou altera a
+infraestrutura, por isso o state do Terraform pode ficar local mesmo (sem backend
+remoto): não há execuções concorrentes/distribuídas de `terraform apply` disputando o
+mesmo state.
 
 ## Aplicar
 
@@ -70,9 +62,13 @@ Uma única `apply` já cria o cluster, o node group **e** o Postgres - nada aqui
 provider `kubernetes` do Terraform (que exigiria o endpoint do EKS existir antes mesmo da
 primeira `apply` rodar). O cluster/node group são recursos nativos do provider `aws`; o
 Postgres é aplicado via `kubectl` (CLI) executado em sequência por `local-exec`, na ordem
-certa, dentro da mesma `apply`. Leva de 15 a 20 minutos na primeira vez (criação de
-cluster + node group na AWS); execuções seguintes (sem mudança de infraestrutura) são
-rápidas, pois o Terraform só confirma que nada mudou.
+certa, dentro da mesma `apply`. Leva de 15 a 20 minutos (criação de cluster + node group
+na AWS).
+
+> O nome do cluster é `oficina` por padrão (`var.cluster_name`) - o CI/CD
+> (`.github/workflows/ci-cd.yml`) espera esse nome exato ao rodar
+> `aws eks update-kubeconfig --name oficina`. Se mudar `cluster_name`, atualize o
+> workflow também.
 
 Para usar `kubectl`/`k8s/README.md` a partir daqui:
 

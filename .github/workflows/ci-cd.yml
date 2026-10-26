@@ -99,6 +99,13 @@ jobs:
   # projeto que usava um cluster "kind" só acessível localmente (e por isso precisava de
   # um runner self-hosted para ter CD de verdade).
   #
+  # Este job NÃO roda Terraform - o cluster/node group/Postgres são provisionados uma
+  # única vez, manualmente, por fora do CI (ver infra/README.md). Rodar "terraform apply"
+  # a cada push exigiria state remoto (S3) só para o CI saber que o cluster já existe -
+  # complexidade desnecessária, já que um deploy normal só troca a imagem da aplicação,
+  # nunca a infraestrutura. O CI só precisa saber falar com o cluster já existente
+  # (`aws eks update-kubeconfig`) e aplicar os manifestos da aplicação.
+  #
   # Pré-requisito: os secrets AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
   # AWS_SESSION_TOKEN do repositório devem estar com as credenciais ATUAIS da sessão do
   # AWS Academy (ela expira em poucas horas - ver infra/README.md). Sem isso, este job
@@ -118,39 +125,23 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
-        with:
-          terraform_version: "1.16.6"
-
-      - name: Provisionar/atualizar cluster EKS + Postgres (Terraform)
-        working-directory: infra
-        env:
-          TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
-          # formato HCL de lista - "[\"a\",\"b\"]" via env var TF_VAR funciona direto.
-          TF_VAR_subnet_ids: ${{ secrets.AWS_SUBNET_IDS }}
-          # secret via "env:" do step, não interpolado direto no "run:" (ver comentário
-          # equivalente no step seguinte sobre por que isso importa).
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-        run: |
-          terraform init \
-            -backend-config="bucket=$TF_STATE_BUCKET" \
-            -backend-config="region=us-east-1"
-          # idempotente: na primeira execução cria cluster+node group+Postgres (~15-20
-          # min); nas seguintes, só confirma que nada mudou (rápido).
-          terraform apply -auto-approve
-          echo "KUBECONFIG=$PWD/kubeconfig" >> "$GITHUB_ENV"
+      - name: Configurar kubectl para o cluster EKS já existente
+        run: aws eks update-kubeconfig --name oficina --region us-east-1
 
       - name: Aplicar manifestos da aplicação
         env:
           # secrets via "env:" do step, nunca interpolados direto num bloco "run:" - isso
           # evita que o valor passe por expansão de shell (Sonar: "Avoid expanding
           # secrets in a run block"), que poderia vazar o segredo em logs de debug.
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           SEED_ADMIN_SENHA: ${{ secrets.SEED_ADMIN_SENHA }}
           SEED_ATENDENTE_SENHA: ${{ secrets.SEED_ATENDENTE_SENHA }}
           SEED_MECANICO_SENHA: ${{ secrets.SEED_MECANICO_SENHA }}
         run: |
-          DB_URL="$(terraform -chdir=infra output -raw postgres_connection_string)"
+          # mesmos usuário/banco/host default definidos em infra/variables.tf - não dá
+          # pra ler isso de "terraform output" aqui porque este job não roda Terraform.
+          DB_URL="postgresql+asyncpg://oficina:${POSTGRES_PASSWORD}@postgres.oficina.svc.cluster.local:5432/oficina"
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/configmap.yaml
           kubectl create secret generic oficina-secrets -n oficina \

@@ -70,9 +70,10 @@ kubectl get hpa -n oficina -w
 O job `deploy` do workflow (`.github/workflows/ci-cd.yml`) roda num runner hospedado
 comum do GitHub (não precisa de runner self-hosted - diferente de uma versão anterior
 deste projeto que usava `kind` local) e atualiza **o mesmo cluster EKS persistente** a
-cada push na `main`: autentica na AWS com os secrets do repositório, roda
-`terraform apply` (idempotente - só cria infraestrutura na primeira vez) e aplica os
-manifestos deste diretório com a tag da imagem recém-publicada.
+cada push na `main`: autentica na AWS com os secrets do repositório, aponta o `kubectl`
+para o cluster já existente (`aws eks update-kubeconfig`) e aplica os manifestos deste
+diretório com a tag da imagem recém-publicada. Esse job **não roda Terraform** - o
+cluster é provisionado à parte, manualmente, uma única vez (ver `infra/README.md`).
 
 **Antes de cada execução** (ou sempre que a sessão do AWS Academy expirar - dura poucas
 horas), atualize os secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e
@@ -88,9 +89,7 @@ laboratório com credenciais temporárias em vez de uma conta AWS permanente.
 | `AWS_ACCESS_KEY_ID` | Credencial temporária do Learner Lab | Sim |
 | `AWS_SECRET_ACCESS_KEY` | Credencial temporária do Learner Lab | Sim |
 | `AWS_SESSION_TOKEN` | Credencial temporária do Learner Lab | Sim |
-| `TF_STATE_BUCKET` | Nome do bucket S3 do backend remoto (ver `infra/README.md`) | Não |
-| `AWS_SUBNET_IDS` | Lista de subnets, formato `["subnet-a","subnet-b"]` (ver `infra/README.md`) | Normalmente não (só se a conta do lab mudar) |
-| `POSTGRES_PASSWORD` | Senha do Postgres provisionado pelo Terraform | Não |
+| `POSTGRES_PASSWORD` | Senha do Postgres (mesma usada no `terraform.tfvars` em `/infra`) | Não |
 | `JWT_SECRET_KEY` | Segredo de assinatura dos JWTs da API | Não |
 | `SEED_ADMIN_SENHA` / `SEED_ATENDENTE_SENHA` / `SEED_MECANICO_SENHA` | Senhas dos usuários de seed criados pela API | Não |
 
