@@ -7,6 +7,11 @@ metadata:
   name: postgres-data
   namespace: oficina
 spec:
+  # explícito de propósito - a StorageClass "gp2" que o EKS cria automaticamente não
+  # vem marcada como default (sem a anotação "storageclass.kubernetes.io/is-default-
+  # class"), então um PVC sem "storageClassName" fica pendurado para sempre com "no
+  # persistent volumes available for this claim and no storage class is set".
+  storageClassName: gp2
   accessModes: ["ReadWriteOnce"]
   resources:
     requests:
