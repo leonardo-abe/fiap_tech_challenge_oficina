@@ -1,8 +1,11 @@
-# Roda "alembic upgrade head" uma única vez antes do Deployment da API subir. O
-# Dockerfile roda a migration no próprio CMD do container, o que é seguro com uma única
-# réplica mas vira corrida (múltiplos "alembic upgrade head" concorrentes) com o HPA
-# escalando a API para várias réplicas - por isso a migration é isolada aqui, e o
-# Deployment (deployment.yaml) sobrescreve o command do container para pular a migration.
+# Roda "alembic upgrade head" e o seed de usuários de teste (scripts/seed_usuarios.py)
+# uma única vez antes do Deployment da API subir. O Dockerfile roda só a migration no
+# próprio CMD do container, o que é seguro com uma única réplica mas vira corrida
+# (múltiplos "alembic upgrade head" concorrentes) com o HPA escalando a API para várias
+# réplicas - por isso a migration é isolada aqui, e o Deployment (deployment.yaml)
+# sobrescreve o command do container para pular a migration. O seed é idempotente (ver
+# scripts/seed_usuarios.py) - rodar de novo em deploys seguintes não causa erro nem
+# duplica usuário.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -21,7 +24,7 @@ spec:
           # ver o mesmo comentário em deployment.yaml sobre a tag ":local".
           image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local
           imagePullPolicy: IfNotPresent
-          command: ["uv", "run", "alembic", "upgrade", "head"]
+          command: ["sh", "-c", "uv run alembic upgrade head && uv run python -m scripts.seed_usuarios"]
           envFrom:
             - configMapRef:
                 name: oficina-config
