@@ -21,6 +21,15 @@ resource "aws_eks_cluster" "this" {
 resource "aws_launch_template" "nodes" {
   name_prefix = "${var.cluster_name}-nodes-"
 
+  # explícito de propósito (Sonar aponta como hotspot quando omitido): as subnets usadas
+  # são as subnets públicas default da conta AWS Academy (sem NAT gateway), então os nós
+  # precisam de IP público para alcançar a internet (puxar imagens do GHCR, etc.) - é o
+  # mesmo comportamento que já ocorreria por padrão (herdado da subnet), só tornado
+  # explícito aqui.
+  network_interfaces {
+    associate_public_ip_address = true
+  }
+
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
