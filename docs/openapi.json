@@ -1,0 +1,2825 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Oficina Mecânica API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/usuarios/": {
+      "post": {
+        "tags": [
+          "usuarios"
+        ],
+        "summary": "Criar Usuario",
+        "operationId": "criar_usuario_api_v1_usuarios__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clientes/": {
+      "post": {
+        "tags": [
+          "clientes"
+        ],
+        "summary": "Criar Cliente",
+        "operationId": "criar_cliente_api_v1_clientes__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClienteCreateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "clientes"
+        ],
+        "summary": "Listar Clientes",
+        "operationId": "listar_clientes_api_v1_clientes__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClienteSchema"
+                  },
+                  "title": "Response Listar Clientes Api V1 Clientes  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clientes/documento/{documento}": {
+      "get": {
+        "tags": [
+          "clientes"
+        ],
+        "summary": "Buscar Cliente Por Documento",
+        "operationId": "buscar_cliente_por_documento_api_v1_clientes_documento__documento__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "documento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Documento"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clientes/{cliente_id}": {
+      "get": {
+        "tags": [
+          "clientes"
+        ],
+        "summary": "Buscar Cliente",
+        "operationId": "buscar_cliente_api_v1_clientes__cliente_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cliente Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "clientes"
+        ],
+        "summary": "Atualizar Cliente",
+        "operationId": "atualizar_cliente_api_v1_clientes__cliente_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cliente Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClienteUpdateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "clientes"
+        ],
+        "summary": "Remover Cliente",
+        "operationId": "remover_cliente_api_v1_clientes__cliente_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cliente Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/veiculos/": {
+      "post": {
+        "tags": [
+          "veiculos"
+        ],
+        "summary": "Criar Veiculo",
+        "operationId": "criar_veiculo_api_v1_veiculos__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VeiculoCreateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VeiculoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "veiculos"
+        ],
+        "summary": "Listar Veiculos",
+        "operationId": "listar_veiculos_api_v1_veiculos__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cliente Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VeiculoSchema"
+                  },
+                  "title": "Response Listar Veiculos Api V1 Veiculos  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/veiculos/placa/{placa}": {
+      "get": {
+        "tags": [
+          "veiculos"
+        ],
+        "summary": "Buscar Veiculo Por Placa",
+        "operationId": "buscar_veiculo_por_placa_api_v1_veiculos_placa__placa__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "placa",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Placa"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VeiculoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/veiculos/{veiculo_id}": {
+      "get": {
+        "tags": [
+          "veiculos"
+        ],
+        "summary": "Buscar Veiculo",
+        "operationId": "buscar_veiculo_api_v1_veiculos__veiculo_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Veiculo Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VeiculoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "veiculos"
+        ],
+        "summary": "Atualizar Veiculo",
+        "operationId": "atualizar_veiculo_api_v1_veiculos__veiculo_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Veiculo Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VeiculoUpdateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VeiculoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "veiculos"
+        ],
+        "summary": "Remover Veiculo",
+        "operationId": "remover_veiculo_api_v1_veiculos__veiculo_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "veiculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Veiculo Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/servicos/": {
+      "post": {
+        "tags": [
+          "servicos"
+        ],
+        "summary": "Criar Servico",
+        "operationId": "criar_servico_api_v1_servicos__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServicoCreateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "servicos"
+        ],
+        "summary": "Listar Servicos",
+        "operationId": "listar_servicos_api_v1_servicos__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nome"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServicoSchema"
+                  },
+                  "title": "Response Listar Servicos Api V1 Servicos  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/servicos/{servico_id}": {
+      "get": {
+        "tags": [
+          "servicos"
+        ],
+        "summary": "Buscar Servico",
+        "operationId": "buscar_servico_api_v1_servicos__servico_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "servico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Servico Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "servicos"
+        ],
+        "summary": "Atualizar Servico",
+        "operationId": "atualizar_servico_api_v1_servicos__servico_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "servico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Servico Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServicoUpdateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "servicos"
+        ],
+        "summary": "Remover Servico",
+        "operationId": "remover_servico_api_v1_servicos__servico_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "servico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Servico Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pecas/": {
+      "post": {
+        "tags": [
+          "pecas"
+        ],
+        "summary": "Criar Peca",
+        "operationId": "criar_peca_api_v1_pecas__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PecaCreateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PecaSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "pecas"
+        ],
+        "summary": "Listar Pecas",
+        "operationId": "listar_pecas_api_v1_pecas__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nome"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PecaSchema"
+                  },
+                  "title": "Response Listar Pecas Api V1 Pecas  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pecas/{peca_id}": {
+      "get": {
+        "tags": [
+          "pecas"
+        ],
+        "summary": "Buscar Peca",
+        "operationId": "buscar_peca_api_v1_pecas__peca_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "peca_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Peca Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PecaSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "pecas"
+        ],
+        "summary": "Atualizar Peca",
+        "operationId": "atualizar_peca_api_v1_pecas__peca_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "peca_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Peca Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PecaUpdateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PecaSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "pecas"
+        ],
+        "summary": "Remover Peca",
+        "operationId": "remover_peca_api_v1_pecas__peca_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "peca_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Peca Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pecas/{peca_id}/estoque": {
+      "patch": {
+        "tags": [
+          "pecas"
+        ],
+        "summary": "Repor Estoque",
+        "operationId": "repor_estoque_api_v1_pecas__peca_id__estoque_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "peca_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Peca Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReporEstoqueSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PecaSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Criar Ordem Servico",
+        "operationId": "criar_ordem_servico_api_v1_ordens_servico__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrdemServicoCreateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Listar Ordens Servico",
+        "operationId": "listar_ordens_servico_api_v1_ordens_servico__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrdemServicoSchema"
+                  },
+                  "title": "Response Listar Ordens Servico Api V1 Ordens Servico  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/diagnostico": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Iniciar Diagnostico",
+        "operationId": "iniciar_diagnostico_api_v1_ordens_servico__ordem_id__diagnostico_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/orcamento/gerar": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Gerar Orcamento",
+        "operationId": "gerar_orcamento_api_v1_ordens_servico__ordem_id__orcamento_gerar_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/orcamento/aprovar": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Aprovar Orcamento",
+        "operationId": "aprovar_orcamento_api_v1_ordens_servico__ordem_id__orcamento_aprovar_post",
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          },
+          {
+            "name": "documento",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "CPF ou CNPJ do cliente dono da OS",
+              "title": "Documento"
+            },
+            "description": "CPF ou CNPJ do cliente dono da OS"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/orcamento/reprovar": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Reprovar Orcamento",
+        "operationId": "reprovar_orcamento_api_v1_ordens_servico__ordem_id__orcamento_reprovar_post",
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          },
+          {
+            "name": "documento",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "CPF ou CNPJ do cliente dono da OS",
+              "title": "Documento"
+            },
+            "description": "CPF ou CNPJ do cliente dono da OS"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/execucao/finalizar": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Finalizar Execucao",
+        "operationId": "finalizar_execucao_api_v1_ordens_servico__ordem_id__execucao_finalizar_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/entrega": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Entregar Ordem Servico",
+        "operationId": "entregar_ordem_servico_api_v1_ordens_servico__ordem_id__entrega_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/cancelamento": {
+      "post": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Cancelar Ordem Servico",
+        "operationId": "cancelar_ordem_servico_api_v1_ordens_servico__ordem_id__cancelamento_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/relatorios/tempo-medio-execucao": {
+      "get": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Relatorio Tempo Medio Execucao",
+        "operationId": "relatorio_tempo_medio_execucao_api_v1_ordens_servico_relatorios_tempo_medio_execucao_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatorioTempoMedioExecucaoSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}": {
+      "get": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Buscar Ordem Servico",
+        "operationId": "buscar_ordem_servico_api_v1_ordens_servico__ordem_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ordens-servico/{ordem_id}/status": {
+      "get": {
+        "tags": [
+          "ordens-servico"
+        ],
+        "summary": "Consultar Status Ordem Servico",
+        "operationId": "consultar_status_ordem_servico_api_v1_ordens_servico__ordem_id__status_get",
+        "parameters": [
+          {
+            "name": "ordem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ordem Id"
+            }
+          },
+          {
+            "name": "documento",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "CPF ou CNPJ do cliente dono da OS",
+              "title": "Documento"
+            },
+            "description": "CPF ou CNPJ do cliente dono da OS"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoStatusSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheckSchema"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClienteCreateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "documento": {
+            "type": "string",
+            "maxLength": 18,
+            "minLength": 11,
+            "title": "Documento"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "documento",
+          "email",
+          "telefone"
+        ],
+        "title": "ClienteCreateSchema"
+      },
+      "ClienteSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "documento": {
+            "type": "string",
+            "title": "Documento"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "telefone": {
+            "type": "string",
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "documento",
+          "email",
+          "telefone"
+        ],
+        "title": "ClienteSchema"
+      },
+      "ClienteUpdateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "documento": {
+            "type": "string",
+            "maxLength": 18,
+            "minLength": 11,
+            "title": "Documento"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Telefone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "documento",
+          "email",
+          "telefone"
+        ],
+        "title": "ClienteUpdateSchema"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthCheckSchema": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "app_name": {
+            "type": "string",
+            "title": "App Name"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "verificado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Verificado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "app_name",
+          "environment",
+          "database",
+          "verificado_em"
+        ],
+        "title": "HealthCheckSchema"
+      },
+      "ItemPecaCreateSchema": {
+        "properties": {
+          "peca_id": {
+            "type": "integer",
+            "title": "Peca Id"
+          },
+          "quantidade": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantidade"
+          }
+        },
+        "type": "object",
+        "required": [
+          "peca_id",
+          "quantidade"
+        ],
+        "title": "ItemPecaCreateSchema"
+      },
+      "ItemPecaSchema": {
+        "properties": {
+          "peca_id": {
+            "type": "integer",
+            "title": "Peca Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "quantidade": {
+            "type": "integer",
+            "title": "Quantidade"
+          },
+          "valor_unitario": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Valor Unitario"
+          },
+          "valor_total": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Valor Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "peca_id",
+          "nome",
+          "quantidade",
+          "valor_unitario",
+          "valor_total"
+        ],
+        "title": "ItemPecaSchema"
+      },
+      "ItemServicoCreateSchema": {
+        "properties": {
+          "servico_id": {
+            "type": "integer",
+            "title": "Servico Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "servico_id"
+        ],
+        "title": "ItemServicoCreateSchema"
+      },
+      "ItemServicoSchema": {
+        "properties": {
+          "servico_id": {
+            "type": "integer",
+            "title": "Servico Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "valor": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Valor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "servico_id",
+          "nome",
+          "valor"
+        ],
+        "title": "ItemServicoSchema"
+      },
+      "LoginRequestSchema": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "senha": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Senha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "senha"
+        ],
+        "title": "LoginRequestSchema"
+      },
+      "OrcamentoSchema": {
+        "properties": {
+          "total_servicos": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Servicos"
+          },
+          "total_pecas": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Pecas"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_servicos",
+          "total_pecas",
+          "total"
+        ],
+        "title": "OrcamentoSchema"
+      },
+      "OrdemServicoCreateSchema": {
+        "properties": {
+          "cliente_id": {
+            "type": "integer",
+            "title": "Cliente Id"
+          },
+          "veiculo_id": {
+            "type": "integer",
+            "title": "Veiculo Id"
+          },
+          "itens_servico": {
+            "items": {
+              "$ref": "#/components/schemas/ItemServicoCreateSchema"
+            },
+            "type": "array",
+            "title": "Itens Servico"
+          },
+          "itens_peca": {
+            "items": {
+              "$ref": "#/components/schemas/ItemPecaCreateSchema"
+            },
+            "type": "array",
+            "title": "Itens Peca"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cliente_id",
+          "veiculo_id"
+        ],
+        "title": "OrdemServicoCreateSchema"
+      },
+      "OrdemServicoSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "cliente_id": {
+            "type": "integer",
+            "title": "Cliente Id"
+          },
+          "veiculo_id": {
+            "type": "integer",
+            "title": "Veiculo Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "recebida_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recebida Em"
+          },
+          "orcamento": {
+            "$ref": "#/components/schemas/OrcamentoSchema"
+          },
+          "itens_servico": {
+            "items": {
+              "$ref": "#/components/schemas/ItemServicoSchema"
+            },
+            "type": "array",
+            "title": "Itens Servico"
+          },
+          "itens_peca": {
+            "items": {
+              "$ref": "#/components/schemas/ItemPecaSchema"
+            },
+            "type": "array",
+            "title": "Itens Peca"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "cliente_id",
+          "veiculo_id",
+          "status",
+          "recebida_em",
+          "orcamento",
+          "itens_servico",
+          "itens_peca"
+        ],
+        "title": "OrdemServicoSchema"
+      },
+      "OrdemServicoStatusSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "recebida_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recebida Em"
+          },
+          "execucao_iniciada_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execucao Iniciada Em"
+          },
+          "finalizada_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalizada Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "recebida_em",
+          "execucao_iniciada_em",
+          "finalizada_em"
+        ],
+        "title": "OrdemServicoStatusSchema"
+      },
+      "PecaCreateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Descricao"
+          },
+          "preco": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Preco"
+          },
+          "quantidade_inicial": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Quantidade Inicial"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descricao",
+          "preco",
+          "quantidade_inicial"
+        ],
+        "title": "PecaCreateSchema"
+      },
+      "PecaSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "preco": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Preco"
+          },
+          "quantidade_disponivel": {
+            "type": "integer",
+            "title": "Quantidade Disponivel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "preco",
+          "quantidade_disponivel"
+        ],
+        "title": "PecaSchema"
+      },
+      "PecaUpdateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Descricao"
+          },
+          "preco": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Preco"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descricao",
+          "preco"
+        ],
+        "title": "PecaUpdateSchema"
+      },
+      "Perfil": {
+        "type": "string",
+        "enum": [
+          "ADMIN",
+          "ATENDENTE",
+          "MECANICO"
+        ],
+        "title": "Perfil"
+      },
+      "RelatorioTempoMedioExecucaoSchema": {
+        "properties": {
+          "quantidade_ordens_finalizadas": {
+            "type": "integer",
+            "title": "Quantidade Ordens Finalizadas"
+          },
+          "tempo_medio_execucao_horas": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tempo Medio Execucao Horas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quantidade_ordens_finalizadas",
+          "tempo_medio_execucao_horas"
+        ],
+        "title": "RelatorioTempoMedioExecucaoSchema"
+      },
+      "ReporEstoqueSchema": {
+        "properties": {
+          "quantidade": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantidade"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quantidade"
+        ],
+        "title": "ReporEstoqueSchema"
+      },
+      "ServicoCreateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Descricao"
+          },
+          "preco": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Preco"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descricao",
+          "preco"
+        ],
+        "title": "ServicoCreateSchema"
+      },
+      "ServicoSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descricao"
+          },
+          "preco": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Preco"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "preco"
+        ],
+        "title": "ServicoSchema"
+      },
+      "ServicoUpdateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Descricao"
+          },
+          "preco": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Preco"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "descricao",
+          "preco"
+        ],
+        "title": "ServicoUpdateSchema"
+      },
+      "TokenResponseSchema": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "TokenResponseSchema"
+      },
+      "UsuarioCreateSchema": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "senha": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Senha"
+          },
+          "perfil": {
+            "$ref": "#/components/schemas/Perfil"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "email",
+          "senha",
+          "perfil"
+        ],
+        "title": "UsuarioCreateSchema"
+      },
+      "UsuarioSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "perfil": {
+            "$ref": "#/components/schemas/Perfil"
+          },
+          "ativo": {
+            "type": "boolean",
+            "title": "Ativo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "perfil",
+          "ativo"
+        ],
+        "title": "UsuarioSchema"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VeiculoCreateSchema": {
+        "properties": {
+          "cliente_id": {
+            "type": "integer",
+            "title": "Cliente Id"
+          },
+          "placa": {
+            "type": "string",
+            "maxLength": 8,
+            "minLength": 7,
+            "title": "Placa"
+          },
+          "marca": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Marca"
+          },
+          "modelo": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Modelo"
+          },
+          "ano": {
+            "type": "integer",
+            "maximum": 2100.0,
+            "minimum": 1900.0,
+            "title": "Ano"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cliente_id",
+          "placa",
+          "marca",
+          "modelo",
+          "ano"
+        ],
+        "title": "VeiculoCreateSchema"
+      },
+      "VeiculoSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "cliente_id": {
+            "type": "integer",
+            "title": "Cliente Id"
+          },
+          "placa": {
+            "type": "string",
+            "title": "Placa"
+          },
+          "marca": {
+            "type": "string",
+            "title": "Marca"
+          },
+          "modelo": {
+            "type": "string",
+            "title": "Modelo"
+          },
+          "ano": {
+            "type": "integer",
+            "title": "Ano"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "cliente_id",
+          "placa",
+          "marca",
+          "modelo",
+          "ano"
+        ],
+        "title": "VeiculoSchema"
+      },
+      "VeiculoUpdateSchema": {
+        "properties": {
+          "cliente_id": {
+            "type": "integer",
+            "title": "Cliente Id"
+          },
+          "placa": {
+            "type": "string",
+            "maxLength": 8,
+            "minLength": 7,
+            "title": "Placa"
+          },
+          "marca": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Marca"
+          },
+          "modelo": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Modelo"
+          },
+          "ano": {
+            "type": "integer",
+            "maximum": 2100.0,
+            "minimum": 1900.0,
+            "title": "Ano"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cliente_id",
+          "placa",
+          "marca",
+          "modelo",
+          "ano"
+        ],
+        "title": "VeiculoUpdateSchema"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
