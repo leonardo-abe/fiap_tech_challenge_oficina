@@ -128,9 +128,12 @@ jobs:
           TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
           # formato HCL de lista - "[\"a\",\"b\"]" via env var TF_VAR funciona direto.
           TF_VAR_subnet_ids: ${{ secrets.AWS_SUBNET_IDS }}
+          # secret via "env:" do step, não interpolado direto no "run:" (ver comentário
+          # equivalente no step seguinte sobre por que isso importa).
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="region=us-east-1"
           # idempotente: na primeira execução cria cluster+node group+Postgres (~15-20
           # min); nas seguintes, só confirma que nada mudou (rápido).
@@ -138,16 +141,24 @@ jobs:
           echo "KUBECONFIG=$PWD/kubeconfig" >> "$GITHUB_ENV"
 
       - name: Aplicar manifestos da aplicação
+        env:
+          # secrets via "env:" do step, nunca interpolados direto num bloco "run:" - isso
+          # evita que o valor passe por expansão de shell (Sonar: "Avoid expanding
+          # secrets in a run block"), que poderia vazar o segredo em logs de debug.
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          SEED_ADMIN_SENHA: ${{ secrets.SEED_ADMIN_SENHA }}
+          SEED_ATENDENTE_SENHA: ${{ secrets.SEED_ATENDENTE_SENHA }}
+          SEED_MECANICO_SENHA: ${{ secrets.SEED_MECANICO_SENHA }}
         run: |
           DB_URL="$(terraform -chdir=infra output -raw postgres_connection_string)"
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/configmap.yaml
           kubectl create secret generic oficina-secrets -n oficina \
             --from-literal=DATABASE_URL="$DB_URL" \
-            --from-literal=JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-            --from-literal=SEED_ADMIN_SENHA="${{ secrets.SEED_ADMIN_SENHA }}" \
-            --from-literal=SEED_ATENDENTE_SENHA="${{ secrets.SEED_ATENDENTE_SENHA }}" \
-            --from-literal=SEED_MECANICO_SENHA="${{ secrets.SEED_MECANICO_SENHA }}" \
+            --from-literal=JWT_SECRET_KEY="$JWT_SECRET_KEY" \
+            --from-literal=SEED_ADMIN_SENHA="$SEED_ADMIN_SENHA" \
+            --from-literal=SEED_ATENDENTE_SENHA="$SEED_ATENDENTE_SENHA" \
+            --from-literal=SEED_MECANICO_SENHA="$SEED_MECANICO_SENHA" \
             --dry-run=client -o yaml | kubectl apply -f -
 
           # o Job de migration é imutável depois de criado - sem apagar o anterior, o
