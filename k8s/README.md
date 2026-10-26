@@ -68,9 +68,9 @@ kubectl get hpa -n oficina -w
 ## CD de verdade: pipeline do GitHub Actions mirando a nuvem
 
 O job `deploy` do workflow (`.github/workflows/ci-cd.yml`) roda num runner hospedado
-comum do GitHub (não precisa de runner self-hosted - diferente de uma versão anterior
-deste projeto que usava `kind` local) e atualiza **o mesmo cluster EKS persistente** a
-cada push na `main`: autentica na AWS com os secrets do repositório, roda
+comum do GitHub (não precisa de runner self-hosted, já que o alvo é um cluster na nuvem
+alcançável pela internet) e atualiza **o mesmo cluster EKS persistente** a cada push na
+`main`: autentica na AWS com os secrets do repositório, roda
 `terraform apply` em `/infra` (idempotente - depois da primeira vez, só confirma que
 nada mudou) e aplica os manifestos deste diretório com a tag da imagem recém-publicada,
 em steps separados e nomeados (namespace/configmap, secret, migration, deployment/
