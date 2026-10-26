@@ -91,20 +91,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Continuous DEPLOYMENT de verdade: autentica na AWS (AWS Academy Learner Lab) e
-  # atualiza o cluster EKS PERSISTENTE compartilhado por toda a equipe/avaliação - não é
-  # um cluster descartável por job, nem depende de nenhuma máquina/runner específico.
-  # Isso só é possível porque o alvo agora é uma API alcançável pela internet (Service
-  # "LoadBalancer" - ver k8s/service.yaml), diferente de uma versão anterior deste
-  # projeto que usava um cluster "kind" só acessível localmente (e por isso precisava de
-  # um runner self-hosted para ter CD de verdade).
-  #
-  # Este job NÃO roda Terraform - o cluster/node group/Postgres são provisionados uma
-  # única vez, manualmente, por fora do CI (ver infra/README.md). Rodar "terraform apply"
-  # a cada push exigiria state remoto (S3) só para o CI saber que o cluster já existe -
-  # complexidade desnecessária, já que um deploy normal só troca a imagem da aplicação,
-  # nunca a infraestrutura. O CI só precisa saber falar com o cluster já existente
-  # (`aws eks update-kubeconfig`) e aplicar os manifestos da aplicação.
+  # Continuous DEPLOYMENT de verdade: autentica na AWS (AWS Academy Learner Lab),
+  # exercita o Terraform de "/infra" (idempotente - só confirma que a infra já existe,
+  # depois da primeira execução) e atualiza o cluster EKS PERSISTENTE compartilhado por
+  # toda a equipe/avaliação - não é um cluster descartável por job, nem depende de
+  # nenhuma máquina/runner específico. Isso só é possível porque o alvo agora é uma API
+  # alcançável pela internet (Service "LoadBalancer" - ver k8s/service.yaml), diferente
+  # de uma versão anterior deste projeto que usava um cluster "kind" só acessível
+  # localmente (e por isso precisava de um runner self-hosted para ter CD de verdade).
   #
   # Pré-requisito: os secrets AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
   # AWS_SESSION_TOKEN do repositório devem estar com as credenciais ATUAIS da sessão do
@@ -116,19 +110,47 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Checkout do repositório
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+      - name: Autenticar na AWS (AWS Academy)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Configurar kubectl para o cluster EKS já existente
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: "1.16.6"
+
+      - name: "Terraform: provisionar/confirmar infraestrutura (cluster EKS + Postgres)"
+        working-directory: infra
+        env:
+          TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          # formato HCL de lista - "[\"a\",\"b\"]" via env var TF_VAR funciona direto.
+          TF_VAR_subnet_ids: ${{ secrets.AWS_SUBNET_IDS }}
+          # secret via "env:" do step, não interpolado direto no "run:" (ver comentário
+          # no step "Criar/atualizar secret da aplicação" sobre por que isso importa).
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+        run: |
+          terraform init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="region=us-east-1"
+          # idempotente: na primeira execução cria cluster+node group+Postgres; nas
+          # seguintes, só confirma que nada mudou (rápido) - é por isso que precisa do
+          # state remoto acima (sem ele, cada execução "esqueceria" que a infra já existe).
+          terraform apply -auto-approve
+
+      - name: Configurar kubectl para o cluster EKS
         run: aws eks update-kubeconfig --name oficina --region us-east-1
 
-      - name: Aplicar manifestos da aplicação
+      - name: Aplicar Namespace e ConfigMap
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+
+      - name: Criar/atualizar Secret da aplicação
         env:
           # secrets via "env:" do step, nunca interpolados direto num bloco "run:" - isso
           # evita que o valor passe por expansão de shell (Sonar: "Avoid expanding
@@ -139,11 +161,7 @@ jobs:
           SEED_ATENDENTE_SENHA: ${{ secrets.SEED_ATENDENTE_SENHA }}
           SEED_MECANICO_SENHA: ${{ secrets.SEED_MECANICO_SENHA }}
         run: |
-          # mesmos usuário/banco/host default definidos em infra/variables.tf - não dá
-          # pra ler isso de "terraform output" aqui porque este job não roda Terraform.
           DB_URL="postgresql+asyncpg://oficina:${POSTGRES_PASSWORD}@postgres.oficina.svc.cluster.local:5432/oficina"
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/configmap.yaml
           kubectl create secret generic oficina-secrets -n oficina \
             --from-literal=DATABASE_URL="$DB_URL" \
             --from-literal=JWT_SECRET_KEY="$JWT_SECRET_KEY" \
@@ -152,6 +170,8 @@ jobs:
             --from-literal=SEED_MECANICO_SENHA="$SEED_MECANICO_SENHA" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Rodar migration (Job alembic upgrade head)
+        run: |
           # o Job de migration é imutável depois de criado - sem apagar o anterior, o
           # "kubectl apply" falharia tentando mudar um campo que o Kubernetes não deixa
           # alterar num Job já existente.
@@ -159,6 +179,8 @@ jobs:
           sed "s|:local|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
           kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
 
+      - name: Atualizar Deployment, Service e HPA da API
+        run: |
           sed "s|:local|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/hpa.yaml
@@ -171,3 +193,25 @@ jobs:
           sleep 5
           curl -sf http://localhost:8000/health
           kill $PF_PID
+
+      - name: Obter URL pública da API (Load Balancer)
+        run: |
+          echo "Aguardando o Load Balancer ficar pronto (pode levar alguns minutos)..."
+          URL=""
+          for i in $(seq 1 30); do
+            URL="$(kubectl get svc oficina-api -n oficina -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+            if [ -n "$URL" ]; then
+              break
+            fi
+            sleep 10
+          done
+
+          {
+            echo "## 🌐 API publicada"
+            if [ -n "$URL" ]; then
+              echo "- Swagger: http://$URL:8000/docs"
+              echo "- Health: http://$URL:8000/health"
+            else
+              echo "⚠️ O Load Balancer ainda não tinha um endereço público depois de 5 minutos - rode \`kubectl get svc oficina-api -n oficina\` manualmente em alguns minutos."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

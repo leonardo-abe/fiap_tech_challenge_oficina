@@ -1,11 +1,19 @@
 terraform {
   required_version = ">= 1.5.0"
 
-  # state local (sem backend remoto) de propósito - este Terraform roda manualmente, uma
-  # única vez (ver infra/README.md), para provisionar o cluster/node group/Postgres. O
-  # CI/CD não executa "terraform apply": um deploy normal só troca a imagem da aplicação
-  # via kubectl (ver .github/workflows/ci-cd.yml), nunca mexe na infraestrutura - por
-  # isso não há necessidade de state remoto compartilhado entre execuções.
+  # state remoto (S3) - o job "deploy" do CI/CD roda "terraform apply" a cada push (ver
+  # .github/workflows/ci-cd.yml), para que o Terraform fique exercitado de ponta a ponta
+  # pela pipeline, não só localmente. Isso exige state compartilhado: sem ele, cada
+  # execução (numa VM nova do runner hospedado, sem o state local) acharia que nada foi
+  # criado ainda e tentaria recriar o cluster, que já existe - e falharia. Com state
+  # remoto, essas execuções (depois da primeira) só confirmam que nada mudou - rápido,
+  # idempotente. O bucket é criado manualmente uma única vez (ver infra/README.md) - o
+  # próprio backend não pode ser gerenciado por este Terraform (mesmo problema de
+  # ovo-e-galinha de um backend se auto-provisionar).
+  backend "s3" {
+    key     = "oficina/terraform.tfstate"
+    encrypt = true
+  }
 
   required_providers {
     aws = {

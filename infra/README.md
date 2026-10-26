@@ -39,15 +39,29 @@ variables → Actions`): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESS
 - Acesso a um AWS Academy Learner Lab iniciado (credenciais exportadas acima).
 - CLIs `aws`, `kubectl` e `terraform` instaladas.
 
-## Este Terraform roda manualmente, uma única vez
+## Bootstrap do backend remoto (uma única vez)
 
-Diferente do `lint`/`test`/`build`, o provisionamento de infraestrutura **não** faz parte
-do pipeline do GitHub Actions: você (ou quem for demonstrar o projeto) roda os comandos
-abaixo manualmente, uma vez, para criar o cluster. Depois disso, o CI/CD só troca a
-imagem da aplicação (`kubectl apply`) a cada push - nunca recria ou altera a
-infraestrutura, por isso o state do Terraform pode ficar local mesmo (sem backend
-remoto): não há execuções concorrentes/distribuídas de `terraform apply` disputando o
-mesmo state.
+O `terraform apply` roda tanto manualmente (primeira vez, para criar o cluster) quanto
+pelo job `deploy` do CI/CD a cada push (ver `.github/workflows/ci-cd.yml`) - para isso
+funcionar sem tentar recriar o cluster do zero a cada execução, o state precisa ficar num
+bucket S3 (compartilhado entre sua máquina e o runner do GitHub), não em disco. Esse
+bucket não pode ser criado pelo próprio Terraform (mesmo problema de ovo-e-galinha de um
+backend se auto-provisionar) - crie uma vez, manualmente:
+
+```bash
+aws s3 mb s3://oficina-tfstate-$(aws sts get-caller-identity --query Account --output text) --region us-east-1
+```
+
+Depois, aponte o backend para esse bucket (substitua pelo nome gerado acima) - se você já
+tinha aplicado antes com state local, use `-migrate-state` para copiar o que já existe:
+
+```bash
+cd infra
+terraform init -backend-config="bucket=oficina-tfstate-<account_id>" -backend-config="region=us-east-1" -migrate-state
+```
+
+Esse mesmo nome de bucket é o valor do secret `TF_STATE_BUCKET` no GitHub (ver
+`../k8s/README.md`).
 
 ## Aplicar
 
