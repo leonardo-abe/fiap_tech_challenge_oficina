@@ -1,20 +1,18 @@
 # Kubernetes (`/k8s`)
 
-Manifestos da **aplicação** (API + migration). O cluster e o banco de dados (Postgres)
-são provisionados pelo Terraform em `/infra` - ver `infra/README.md`.
+Manifestos da **aplicação** (API + migration). O cluster (EKS) e o banco de dados
+(Postgres) são provisionados pelo Terraform em `/infra` - ver `infra/README.md`,
+inclusive a seção de credenciais do AWS Academy e a ordem certa de destroy.
 
 ## Pré-requisitos
 
-- Cluster kind já criado e com `kubectl` apontando pra ele (`cd ../infra && terraform apply`).
-- `metrics-server` instalado no cluster (necessário para o HPA funcionar; o kind não vem
+- Cluster já criado e com `kubectl` apontando pra ele (`cd ../infra && terraform apply`,
+  depois `export KUBECONFIG="$(terraform output -raw kubeconfig_path)"`).
+- `metrics-server` instalado no cluster (necessário para o HPA funcionar; o EKS não vem
   com ele por padrão):
 
   ```bash
   kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-  # kind usa certificados self-signed no kubelet - sem essa flag o metrics-server não
-  # consegue coletar métricas e o HPA nunca sai de "unknown".
-  kubectl patch deployment metrics-server -n kube-system --type=json \
-    -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
   ```
 
 ## Imagem da aplicação
@@ -22,15 +20,8 @@ são provisionados pelo Terraform em `/infra` - ver `infra/README.md`.
 Os manifestos apontam para `ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local` - é só
 um placeholder de template (não "latest" de propósito, por rastreabilidade); o CI/CD
 substitui pela tag do commit (SHA) antes de aplicar (ver `.github/workflows/ci-cd.yml`).
-Para aplicar manualmente, builde localmente com essa mesma tag e carregue no cluster kind:
-
-```bash
-docker build -t ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local ..
-kind load docker-image ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local --name oficina
-```
-
-`deployment.yaml`/`migrate-job.yaml` usam `imagePullPolicy: IfNotPresent` justamente para
-usar essa imagem carregada localmente em vez de tentar puxar do registry.
+O pacote no GHCR é público, então o node do EKS consegue puxar a imagem direto do
+registry sem credencial nenhuma.
 
 ## Aplicar
 
@@ -39,7 +30,8 @@ kubectl apply -f namespace.yaml
 
 # segredos reais - nunca commitar secret.yaml (já está no .gitignore)
 cp secret.yaml.example secret.yaml
-# edite secret.yaml com valores reais antes de aplicar
+# edite secret.yaml com valores reais antes de aplicar (DATABASE_URL vem de
+# "terraform output -raw postgres_connection_string" em /infra)
 kubectl apply -f secret.yaml
 kubectl apply -f configmap.yaml
 
@@ -53,47 +45,60 @@ kubectl apply -f hpa.yaml
 kubectl rollout status deployment/oficina-api -n oficina
 ```
 
-## Testar localmente
+## Acessar a API (público, via Load Balancer)
+
+`service.yaml` é `type: LoadBalancer` - a AWS provisiona um Load Balancer real com IP/DNS
+público (leva alguns minutos para ficar pronto):
 
 ```bash
-kubectl port-forward svc/oficina-api 8000:8000 -n oficina
-curl localhost:8000/health
+kubectl get svc oficina-api -n oficina -w
+# espere a coluna EXTERNAL-IP deixar de ser "<pending>"
+
+curl http://<EXTERNAL-IP>:8000/health
 ```
 
 ## Gerar carga e observar o HPA escalando
 
 ```bash
 kubectl get hpa -n oficina -w
-# em outro terminal, gere carga contra a API (via port-forward acima ou um pod dentro
-# do cluster), por exemplo com k6/hey, ou um loop simples de curl em paralelo.
+# em outro terminal, gere carga contra o EXTERNAL-IP acima, por exemplo com k6/hey, ou
+# um loop simples de curl em paralelo.
 ```
 
-## CD de verdade: runner self-hosted (job `deploy-local` do CI/CD)
+## CD de verdade: pipeline do GitHub Actions mirando a nuvem
 
-O job `deploy-e2e` do workflow (`.github/workflows/ci-cd.yml`) só **valida** que o deploy
-funciona, num cluster descartável dentro do runner hospedado do GitHub - nada fica no ar
-depois. Para a pipeline realmente **atualizar o cluster que você usa na demonstração** a
-cada push na `main` (Continuous Deployment de verdade, não só validação), registre a sua
-própria máquina como um runner self-hosted do GitHub Actions:
+O job `deploy` do workflow (`.github/workflows/ci-cd.yml`) roda num runner hospedado
+comum do GitHub (não precisa de runner self-hosted - diferente de uma versão anterior
+deste projeto que usava `kind` local) e atualiza **o mesmo cluster EKS persistente** a
+cada push na `main`: autentica na AWS com os secrets do repositório, roda
+`terraform apply` (idempotente - só cria infraestrutura na primeira vez) e aplica os
+manifestos deste diretório com a tag da imagem recém-publicada.
 
-1. Deixe o cluster de pé (`cd ../infra && terraform apply` - ver `infra/README.md`) e
-   mescle o kubeconfig no padrão, para o `kubectl` funcionar sem configuração extra:
-   ```bash
-   kind export kubeconfig --name oficina
-   ```
-2. No GitHub: **Settings → Actions → Runners → New self-hosted runner** e siga os
-   comandos que a própria página gera para o seu sistema operacional (baixa o agente,
-   registra no repositório).
-3. Rode o runner (`./run.sh` ou `run.cmd`, conforme o SO) e deixe o processo aberto - é
-   ele quem executa o job `deploy-local` sempre que houver um push na `main`.
+**Antes de cada execução** (ou sempre que a sessão do AWS Academy expirar - dura poucas
+horas), atualize os secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e
+`AWS_SESSION_TOKEN` em `Settings → Secrets and variables → Actions` com as credenciais
+atuais do Learner Lab (aba **AWS Details → AWS CLI**). Sem isso, o job falha na
+autenticação - é esperado, não é um bug: é o trade-off documentado de usar um ambiente de
+laboratório com credenciais temporárias em vez de uma conta AWS permanente.
 
-> **Segurança**: só é seguro manter um runner self-hosted em repositório público porque
-> o job `deploy-local` está restrito a `push` direto na `main` - nunca roda em
-> `pull_request` (nem de PRs do próprio repositório). Um runner self-hosted exposto a
-> `pull_request` de forks seria uma porta aberta para rodar código arbitrário na sua
-> máquina a partir de um PR malicioso.
+### Secrets necessários no repositório (`Settings → Secrets and variables → Actions`)
 
-Com o runner rodando, qualquer push na `main` (merge de PR, por exemplo) atualiza
-automaticamente a imagem rodando no seu cluster local - é esse fluxo que vale gravar no
-vídeo: um `git push`, a aba *Actions* do GitHub executando o job `deploy-local` ao vivo, e
-os pods em `kubectl get pods -n oficina -w` sendo substituídos pela nova versão.
+| Secret | O quê | Muda a cada sessão do Academy? |
+|---|---|---|
+| `AWS_ACCESS_KEY_ID` | Credencial temporária do Learner Lab | Sim |
+| `AWS_SECRET_ACCESS_KEY` | Credencial temporária do Learner Lab | Sim |
+| `AWS_SESSION_TOKEN` | Credencial temporária do Learner Lab | Sim |
+| `TF_STATE_BUCKET` | Nome do bucket S3 do backend remoto (ver `infra/README.md`) | Não |
+| `AWS_SUBNET_IDS` | Lista de subnets, formato `["subnet-a","subnet-b"]` (ver `infra/README.md`) | Normalmente não (só se a conta do lab mudar) |
+| `POSTGRES_PASSWORD` | Senha do Postgres provisionado pelo Terraform | Não |
+| `JWT_SECRET_KEY` | Segredo de assinatura dos JWTs da API | Não |
+| `SEED_ADMIN_SENHA` / `SEED_ATENDENTE_SENHA` / `SEED_MECANICO_SENHA` | Senhas dos usuários de seed criados pela API | Não |
+
+Só os três primeiros (credenciais AWS) precisam ser atualizados periodicamente; os
+demais são configurados uma única vez.
+
+Com os secrets em dia, qualquer push na `main` (merge de PR, por exemplo) atualiza
+automaticamente a imagem rodando no cluster - é esse fluxo que vale gravar no vídeo: um
+`git push`, a aba *Actions* do GitHub executando o job `deploy` ao vivo, e os pods em
+`kubectl get pods -n oficina -w` sendo substituídos pela nova versão, acessível
+publicamente pelo `EXTERNAL-IP` do Service.

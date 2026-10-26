@@ -1,10 +1,16 @@
+# "LoadBalancer" (não "ClusterIP") - no EKS isso provisiona um Load Balancer real da AWS
+# com IP/DNS público (ver "EXTERNAL-IP" em "kubectl get svc"). Diferente do kind local,
+# aqui a API fica acessível de fora do cluster sem precisar de "kubectl port-forward" -
+# é assim que o enunciado/vídeo mostram a aplicação rodando "em produção" na nuvem.
+# Atenção ao destruir a infra: ver a seção de destroy em infra/README.md (o Load Balancer
+# é criado por fora do Terraform e precisa ser removido antes do "terraform destroy").
 apiVersion: v1
 kind: Service
 metadata:
   name: oficina-api
   namespace: oficina
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: oficina-api
   ports:

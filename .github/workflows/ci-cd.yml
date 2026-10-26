@@ -91,48 +91,51 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # VALIDAÇÃO automatizada, não deploy contínuo de verdade: sobe um cluster kind
-  # efêmero dentro do próprio runner hospedado (via o mesmo Terraform de /infra,
-  # exercitando-o de verdade) só para provar que a imagem recém-publicada sobe de
-  # ponta a ponta no Kubernetes - banco, migration, Deployment e /health. O cluster
-  # inteiro é descartado com o runner ao fim do job; nada fica no ar, porque um runner
-  # hospedado do GitHub não tem como ficar acessível depois que o job termina. Quem
-  # efetivamente atualiza um ambiente persistente e alcançável é o job "deploy-local"
-  # logo abaixo.
-  deploy-e2e:
+  # Continuous DEPLOYMENT de verdade: autentica na AWS (AWS Academy Learner Lab) e
+  # atualiza o cluster EKS PERSISTENTE compartilhado por toda a equipe/avaliação - não é
+  # um cluster descartável por job, nem depende de nenhuma máquina/runner específico.
+  # Isso só é possível porque o alvo agora é uma API alcançável pela internet (Service
+  # "LoadBalancer" - ver k8s/service.yaml), diferente de uma versão anterior deste
+  # projeto que usava um cluster "kind" só acessível localmente (e por isso precisava de
+  # um runner self-hosted para ter CD de verdade).
+  #
+  # Pré-requisito: os secrets AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+  # AWS_SESSION_TOKEN do repositório devem estar com as credenciais ATUAIS da sessão do
+  # AWS Academy (ela expira em poucas horas - ver infra/README.md). Sem isso, este job
+  # falha na autenticação - esperado, é o trade-off de usar um laboratório temporário em
+  # vez de uma conta AWS permanente.
+  deploy:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: "1.16.6"
 
-      - name: Instalar kind e kubectl
-        run: |
-          # baixa no diretório de trabalho (sempre gravável) e só usa sudo para mover/
-          # marcar executável em /usr/local/bin - o runner hospedado não deixa escrever
-          # lá diretamente com o usuário sem privilégio. --proto '=https' impede que um
-          # redirecionamento leve o curl para uma URL não-https sem erro.
-          curl --proto '=https' --tlsv1.2 -Lo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
-          sudo install -m 0755 kind /usr/local/bin/kind
-          kubectl_version="$(curl --proto '=https' --tlsv1.2 -Ls https://dl.k8s.io/release/stable.txt)"
-          curl --proto '=https' --tlsv1.2 -Lo kubectl "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
-          sudo install -m 0755 kubectl /usr/local/bin/kubectl
-
-      - name: Provisionar cluster kind + Postgres (Terraform)
+      - name: Provisionar/atualizar cluster EKS + Postgres (Terraform)
         working-directory: infra
+        env:
+          TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          # formato HCL de lista - "[\"a\",\"b\"]" via env var TF_VAR funciona direto.
+          TF_VAR_subnet_ids: ${{ secrets.AWS_SUBNET_IDS }}
         run: |
-          terraform init
-          terraform apply -auto-approve -var="postgres_password=${{ github.run_id }}"
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="region=us-east-1"
+          # idempotente: na primeira execução cria cluster+node group+Postgres (~15-20
+          # min); nas seguintes, só confirma que nada mudou (rápido).
+          terraform apply -auto-approve
           echo "KUBECONFIG=$PWD/kubeconfig" >> "$GITHUB_ENV"
-
-      - name: Carregar imagem no cluster
-        run: |
-          docker pull ${{ env.IMAGE }}:${{ github.sha }}
-          kind load docker-image ${{ env.IMAGE }}:${{ github.sha }} --name oficina
 
       - name: Aplicar manifestos da aplicação
         run: |
@@ -141,63 +144,12 @@ jobs:
           kubectl apply -f k8s/configmap.yaml
           kubectl create secret generic oficina-secrets -n oficina \
             --from-literal=DATABASE_URL="$DB_URL" \
-            --from-literal=JWT_SECRET_KEY="ci-ephemeral-jwt-secret-de-32-bytes-ou-mais" \
-            --from-literal=SEED_ADMIN_SENHA="admin123" \
-            --from-literal=SEED_ATENDENTE_SENHA="atendente123" \
-            --from-literal=SEED_MECANICO_SENHA="mecanico123"
+            --from-literal=JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+            --from-literal=SEED_ADMIN_SENHA="${{ secrets.SEED_ADMIN_SENHA }}" \
+            --from-literal=SEED_ATENDENTE_SENHA="${{ secrets.SEED_ATENDENTE_SENHA }}" \
+            --from-literal=SEED_MECANICO_SENHA="${{ secrets.SEED_MECANICO_SENHA }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
-          sed "s|:local|:${{ github.sha }}|" k8s/migrate-job.yaml | kubectl apply -f -
-          kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
-
-          sed "s|:local|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/hpa.yaml
-          kubectl rollout status deployment/oficina-api -n oficina --timeout=120s
-
-      - name: Smoke test (/health)
-        run: |
-          kubectl port-forward svc/oficina-api 8000:8000 -n oficina &
-          sleep 5
-          curl -sf http://localhost:8000/health
-
-      - name: Destruir cluster
-        if: always()
-        working-directory: infra
-        run: terraform destroy -auto-approve -var="postgres_password=${{ github.run_id }}"
-
-  # Continuous DEPLOYMENT de verdade: atualiza o cluster kind PERSISTENTE que já está
-  # de pé na máquina onde esse runner self-hosted roda (criado uma vez, manualmente,
-  # via "terraform apply" - ver infra/README.md). Diferente do deploy-e2e acima, esse
-  # ambiente continua no ar depois do job terminar - é nele que a demonstração/vídeo
-  # roda, e é esse job que efetivamente conecta "push na main" a "app atualizado no
-  # cluster que você está olhando".
-  #
-  # Pré-requisitos na máquina que hospeda o runner (ver k8s/README.md):
-  #   - cluster kind "oficina" já criado e com kubeconfig mesclado ao padrão
-  #     (`kind export kubeconfig --name oficina`), para o `kubectl` funcionar sem
-  #     configuração extra nos passos abaixo;
-  #   - runner self-hosted do GitHub Actions instalado e rodando (Settings > Actions >
-  #     Runners > New self-hosted runner).
-  #
-  # Segurança: um runner self-hosted em repositório PÚBLICO é perigoso se qualquer
-  # pull_request puder disparar jobs nele (um PR malicioso rodaria código arbitrário na
-  # sua máquina). Por isso este job só roda em push direto na main - só quem tem
-  # permissão de escrita no repositório consegue disparar (ou alterar) este job; ele
-  # nunca roda em pull_request, nem mesmo de PRs do próprio repositório.
-  deploy-local:
-    runs-on: self-hosted
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Carregar imagem no cluster local
-        run: |
-          docker pull ${{ env.IMAGE }}:${{ github.sha }}
-          kind load docker-image ${{ env.IMAGE }}:${{ github.sha }} --name oficina
-
-      - name: Atualizar deploy
-        run: |
           # o Job de migration é imutável depois de criado - sem apagar o anterior, o
           # "kubectl apply" falharia tentando mudar um campo que o Kubernetes não deixa
           # alterar num Job já existente.
@@ -206,7 +158,9 @@ jobs:
           kubectl wait --for=condition=complete job/oficina-migrate -n oficina --timeout=120s
 
           sed "s|:local|:${{ github.sha }}|" k8s/deployment.yaml | kubectl apply -f -
-          kubectl rollout status deployment/oficina-api -n oficina --timeout=120s
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/hpa.yaml
+          kubectl rollout status deployment/oficina-api -n oficina --timeout=180s
 
       - name: Smoke test (/health)
         run: |

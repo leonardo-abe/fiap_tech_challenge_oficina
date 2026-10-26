@@ -23,9 +23,9 @@ spec:
           # .github/workflows/ci-cd.yml); "latest" de propósito evitado aqui porque é
           # uma tag flutuante (sem rastreabilidade de qual versão está rodando).
           image: ghcr.io/leonardo-abe/fiap_tech_challenge_oficina:local
-          # IfNotPresent (não o default "Always" que a tag "latest" implicaria) - permite
-          # usar uma imagem carregada localmente via "kind load docker-image" sem
-          # depender do registry estar acessível (útil em dev local/smoke test de CI).
+          # IfNotPresent (não o default "Always" que a tag "latest" implicaria) - como o
+          # CI sempre aplica com a tag do commit (SHA, imutável), não há necessidade de
+          # checar o registry de novo se o node já tem essa tag em cache.
           imagePullPolicy: IfNotPresent
           # sobrescreve o CMD do Dockerfile (que roda "alembic upgrade head" antes de
           # subir) - a migration já rodou no Job oficina-migrate; rodá-la de novo aqui,

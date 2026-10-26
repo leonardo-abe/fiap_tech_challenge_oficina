@@ -4,7 +4,7 @@
 # para o cluster, outra para o resto). Usando kubectl via local-exec, tudo roda em
 # sequência dentro da MESMA apply, sem essa limitação.
 resource "null_resource" "postgres" {
-  depends_on = [null_resource.kind_cluster]
+  depends_on = [null_resource.kubeconfig]
 
   triggers = {
     postgres_user = var.postgres_user
