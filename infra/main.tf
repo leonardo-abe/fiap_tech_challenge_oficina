@@ -32,6 +32,22 @@ resource "aws_eks_node_group" "this" {
   }
 }
 
+# obrigatório para o PersistentVolumeClaim do Postgres sair de "Pending": o
+# provisionador de volume "in-tree" (kubernetes.io/aws-ebs, que a StorageClass "gp2"
+# padrão do EKS ainda referencia) está depreciado e não provisiona mais nada em
+# clusters recentes - sem este add-on, o PVC fica pendurado indefinidamente e o pod do
+# Postgres nunca chega a ser agendado ("unbound immediate PersistentVolumeClaims"). O
+# node role (LabRole) já tem as permissões de EC2/EBS necessárias (política ampla do
+# AWS Academy), então não precisamos de uma role IRSA dedicada para o add-on.
+resource "aws_eks_addon" "ebs_csi" {
+  cluster_name                = aws_eks_cluster.this.name
+  addon_name                  = "aws-ebs-csi-driver"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [aws_eks_node_group.this]
+}
+
 # gera o kubeconfig (via CLI "aws eks update-kubeconfig", a mesma forma documentada pela
 # própria AWS) só depois que cluster E node group estão prontos - os passos seguintes
 # (Postgres, aplicação) precisam de nós de verdade para agendar pods.
