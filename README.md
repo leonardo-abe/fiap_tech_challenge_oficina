@@ -57,8 +57,8 @@ cliente visibilidade do andamento do serviço. Esta API resolve isso com:
 - **Gerenciador de pacotes**: [uv](https://docs.astral.sh/uv/)
 - **Containers**: Docker + Docker Compose
 - **Orquestração**: Kubernetes (manifestos em [`k8s/`](k8s/)), com `HorizontalPodAutoscaler`
-- **Infraestrutura como código**: Terraform ([`infra/`](infra/)) — cluster Kubernetes local
-  (kind) + Postgres
+- **Infraestrutura como código**: Terraform ([`infra/`](infra/)) — cluster Kubernetes
+  (AWS EKS, via AWS Academy Learner Lab) + Postgres
 - **CI/CD**: GitHub Actions ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml))
 - **Testes**: pytest, `pytest-asyncio`, `pytest-cov`
 - **Qualidade/segurança**: ruff (lint), bandit (SAST), pip-audit (SCA), SonarQube
@@ -199,62 +199,69 @@ flowchart LR
     subgraph CICD["GitHub Actions (push na main)"]
         direction LR
         Lint[lint] --> Test[test] --> Build["build\n+ push imagem (GHCR)"]
-        Build --> E2E["deploy-e2e\n(runner hospedado)\ncluster kind efêmero - só validação"]
-        Build --> Local["deploy-local\n(runner self-hosted)\natualiza o cluster persistente"]
+        Build --> Deploy["deploy\n(runner hospedado)\nterraform apply + kubectl apply"]
     end
 
     Build -->|"docker push"| GHCR[("GHCR\nghcr.io/.../fiap_tech_challenge_oficina")]
 
-    subgraph Infra["Terraform (infra/) - rodado uma vez, manualmente"]
-        Cluster["cluster kind local\n(persistente)"]
-        PG[("Postgres\n(Deployment + PVC)")]
-        Cluster --> PG
+    subgraph AWS["AWS Academy Learner Lab"]
+        subgraph Infra["Terraform (infra/) - idempotente a cada push"]
+            Cluster["Cluster EKS\n+ node group (EC2)"]
+            PG[("Postgres\n(Deployment + PVC)")]
+            Cluster --> PG
+        end
+
+        subgraph K8s["Manifestos da aplicação (k8s/)"]
+            direction TB
+            Migrate["Job: migrate\n(alembic upgrade head)"]
+            ApiDeploy["Deployment: oficina-api\n2-10 réplicas"]
+            Svc["Service: oficina-api\n(LoadBalancer)"]
+            HPA["HorizontalPodAutoscaler\nalvo 70% CPU"]
+            Migrate --> ApiDeploy
+            HPA -. escala .-> ApiDeploy
+            Svc --> ApiDeploy
+        end
     end
 
-    subgraph K8s["Manifestos da aplicação (k8s/)"]
-        direction TB
-        Migrate["Job: migrate\n(alembic upgrade head)"]
-        Deploy["Deployment: oficina-api\n2-10 réplicas"]
-        Svc["Service: oficina-api\n(ClusterIP)"]
-        HPA["HorizontalPodAutoscaler\nalvo 70% CPU"]
-        Migrate --> Deploy
-        HPA -. escala .-> Deploy
-        Svc --> Deploy
-    end
-
-    Local -->|"kubectl apply"| K8s
-    GHCR --> Deploy
-    Deploy --> PG
+    Deploy -->|"terraform apply"| Cluster
+    Deploy -->|"kubectl apply"| K8s
+    GHCR --> ApiDeploy
+    ApiDeploy --> PG
     Migrate --> PG
-    Cliente(["Cliente / Postman / Swagger"]) -->|"kubectl port-forward"| Svc
+    Cliente(["Cliente / Postman / Swagger"]) -->|"IP público do Load Balancer"| Svc
 ```
 
 - **Componentes da aplicação**: a mesma API FastAPI da Fase 1 (Clean Architecture),
-  agora rodando como `Deployment` com múltiplas réplicas atrás de um `Service`.
-- **Infraestrutura provisionada**: `infra/` (Terraform) cria o cluster Kubernetes local
-  (kind) e o Postgres dentro dele, uma vez, manualmente; `k8s/` aplica os manifestos da
-  própria API (Job de migration, Deployment, Service, HPA) nesse cluster.
+  agora rodando como `Deployment` com múltiplas réplicas atrás de um `Service` público.
+- **Infraestrutura provisionada**: `infra/` (Terraform) provisiona um **cluster EKS real**
+  na AWS (AWS Academy Learner Lab) com node group (EC2) e o Postgres dentro dele; `k8s/`
+  aplica os manifestos da própria API (Job de migration, Deployment, Service
+  `LoadBalancer`, HPA) nesse cluster.
 - **Fluxo de deploy**: todo push na `main` roda lint → testes → build/push da imagem
-  (GHCR) e então dois deploys em paralelo:
-  - `deploy-e2e`, num runner **hospedado** do GitHub, sobe um cluster kind **efêmero
-    dentro do próprio runner**, aplica tudo e faz smoke test em `/health` — é só
-    **validação automatizada** de que o deploy funciona; o cluster é descartado ao fim
-    do job, não acessível de fora.
-  - `deploy-local`, num runner **self-hosted** (a própria máquina de quem for
-    demonstrar), atualiza de fato o cluster kind **persistente** já de pé — esse é o
-    Continuous Deployment propriamente dito: o ambiente que fica no ar entre um push e
-    outro, e onde roda a demonstração do vídeo (inclusive o HPA escalando sob carga).
-  Ver [`k8s/README.md`](k8s/README.md#cd-de-verdade-runner-self-hosted-job-deploy-local-do-cicd)
-  para configurar o runner self-hosted.
+  (GHCR) e então o job `deploy` (runner hospedado comum do GitHub — **não precisa de
+  runner self-hosted**, porque o alvo é um cluster na nuvem alcançável pela internet), em
+  steps separados e nomeados: autentica na AWS, roda `terraform apply` (idempotente - só
+  provisiona na primeira vez, depois só confirma que nada mudou), aponta o `kubectl` para
+  o cluster e aplica os manifestos (namespace/configmap, secret, migration, deployment/
+  service/HPA) com a tag da imagem recém publicada, termina com um smoke test e publica a
+  **URL pública da API** no resumo da execução do Actions. É Continuous Deployment de
+  verdade: o ambiente fica no ar entre um push e outro, acessível publicamente pelo IP do
+  Load Balancer, e é nele que roda a demonstração do vídeo (inclusive o HPA escalando sob
+  carga).
+  ⚠️ **As credenciais do AWS Academy expiram em poucas horas** — antes de cada execução
+  (ou sempre que a sessão expirar), é preciso atualizar os secrets do repositório com as
+  credenciais atuais do Learner Lab. Ver a lista completa de secrets necessários e o
+  passo a passo em [`k8s/README.md`](k8s/README.md#secrets-necessários-no-repositório-settings--secrets-and-variables--actions).
 
 ### Executar
 
 | O quê | Onde |
 |---|---|
 | Rodar a aplicação localmente (Docker Compose) | seção [Dados iniciais para uso](#dados-iniciais-para-uso) acima |
-| Provisionar o cluster Kubernetes local + banco | [`infra/README.md`](infra/README.md) (`terraform apply`) |
+| Provisionar o cluster EKS + banco na AWS (primeira vez, manual) | [`infra/README.md`](infra/README.md) (`terraform apply`) — inclui credenciais do Academy e bootstrap do backend remoto |
 | Aplicar os manifestos da aplicação no cluster | [`k8s/README.md`](k8s/README.md) (`kubectl apply -f k8s/`) |
 | Pipeline de CI/CD | [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) |
+| **Destruir tudo (evitar cobrança no lab)** | [`infra/README.md`](infra/README.md#-destruir-tudo-importante--evita-cobrança-continuada-no-aws-academy) |
 
 ### Collection da API e vídeo demonstrativo
 

@@ -1,3 +1,9 @@
 # Copie para terraform.tfvars (já no .gitignore - nunca commitar valores reais) e
 # preencha antes de rodar terraform apply.
 postgres_password = "troque-por-uma-senha-forte"
+
+# Subnets de pelo menos 2 AZs do VPC default da conta AWS Academy em uso - descubra com:
+#   aws ec2 describe-subnets --filters Name=default-for-az,Values=true \
+#     --query 'Subnets[].[SubnetId,AvailabilityZone]' --output table
+# Evite AZs que o EKS rejeitar com UnsupportedAvailabilityZoneException (varia por conta).
+subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy", "subnet-zzzzzzzz"]

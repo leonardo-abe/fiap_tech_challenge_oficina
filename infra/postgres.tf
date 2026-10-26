@@ -4,7 +4,9 @@
 # para o cluster, outra para o resto). Usando kubectl via local-exec, tudo roda em
 # sequência dentro da MESMA apply, sem essa limitação.
 resource "null_resource" "postgres" {
-  depends_on = [null_resource.kind_cluster]
+  # precisa do add-on EBS CSI (ver main.tf) já instalado - senão o PVC do Postgres fica
+  # "Pending" para sempre e o rollout abaixo nunca completa.
+  depends_on = [null_resource.kubeconfig, aws_eks_addon.ebs_csi]
 
   triggers = {
     postgres_user = var.postgres_user
@@ -29,6 +31,6 @@ resource "null_resource" "postgres" {
   }
 
   provisioner "local-exec" {
-    command = "kubectl --kubeconfig ${var.kubeconfig_path} rollout status deployment/postgres -n oficina --timeout=120s"
+    command = "kubectl --kubeconfig ${var.kubeconfig_path} rollout status deployment/postgres -n oficina --timeout=240s"
   }
 }
