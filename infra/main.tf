@@ -75,11 +75,20 @@ resource "aws_eks_addon" "ebs_csi" {
 # gera o kubeconfig (via CLI "aws eks update-kubeconfig", a mesma forma documentada pela
 # própria AWS) só depois que cluster E node group estão prontos - os passos seguintes
 # (Postgres, aplicação) precisam de nós de verdade para agendar pods.
+#
+# "always_run" de propósito: o "local-exec" de um null_resource só roda na criação do
+# recurso (ou quando os triggers mudam) - num trigger fixo como "cluster_name", uma vez
+# registrado como criado no state, o Terraform nunca mais regenera o arquivo, mesmo que
+# ele não exista na máquina atual. Isso quebra o CI/CD: cada execução do pipeline roda
+# numa VM nova do runner, sem esse arquivo (confirmado na prática: "stat kubeconfig: no
+# such file or directory"). Com "always_run = timestamp()", o provisioner roda em TODA
+# apply, garantindo que o arquivo sempre existe na máquina que está aplicando - seguro e
+# barato de repetir, já que "aws eks update-kubeconfig" é idempotente.
 resource "null_resource" "kubeconfig" {
   depends_on = [aws_eks_node_group.this]
 
   triggers = {
-    cluster_name = var.cluster_name
+    always_run = timestamp()
   }
 
   provisioner "local-exec" {
