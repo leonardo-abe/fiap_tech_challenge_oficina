@@ -252,6 +252,10 @@ flowchart LR
   (ou sempre que a sessão expirar), é preciso atualizar os secrets do repositório com as
   credenciais atuais do Learner Lab. Ver a lista completa de secrets necessários e o
   passo a passo em [`k8s/README.md`](k8s/README.md#secrets-necessários-no-repositório-settings--secrets-and-variables--actions).
+  O Learner Lab às vezes também troca de **conta AWS inteira** entre sessões (não só as
+  credenciais) - nesse caso o bucket do state e as subnets de uma sessão anterior deixam
+  de existir; ver [`infra/README.md`](infra/README.md#️-o-aws-academy-pode-trocar-de-conta-a-cada-sessão-do-lab)
+  para como identificar e refazer o bootstrap.
 
 ### Executar
 
