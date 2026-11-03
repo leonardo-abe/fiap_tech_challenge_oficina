@@ -68,6 +68,11 @@ Escolha 3 subnets em AZs diferentes - evite `us-east-1e`, que historicamente rej
 control plane do EKS (`UnsupportedAvailabilityZoneException`); `us-east-1a`, `1b`, `1c`,
 `1d` e `1f` funcionam.
 
+Como o cluster é recriado do zero, o **metrics-server também precisa ser reinstalado**
+manualmente (ele não é gerenciado pelo Terraform nem pelo CI/CD - ver pré-requisito em
+`../k8s/README.md`); sem ele o HPA é criado normalmente, mas fica sem métricas de CPU
+para escalar de verdade.
+
 ## Bootstrap do backend remoto (uma única vez por conta do Academy)
 
 O `terraform apply` roda tanto manualmente (primeira vez, para criar o cluster) quanto
