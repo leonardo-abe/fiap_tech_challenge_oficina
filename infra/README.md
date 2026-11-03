@@ -39,7 +39,36 @@ variables → Actions`): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESS
 - Acesso a um AWS Academy Learner Lab iniciado (credenciais exportadas acima).
 - CLIs `aws`, `kubectl` e `terraform` instaladas.
 
-## Bootstrap do backend remoto (uma única vez)
+## ⚠️ O AWS Academy pode trocar de conta a cada sessão do lab
+
+Diferente de credenciais que só expiram, o Learner Lab às vezes atribui uma **conta AWS
+diferente** a cada nova sessão (o `Account` retornado por
+`aws sts get-caller-identity` muda). Quando isso acontece, o bucket S3 do backend remoto
+da sessão anterior deixa de existir (é de outra conta) e qualquer cluster/Postgres
+também - não é um bug, é o ambiente de lab sendo reciclado. Sinais de que isso ocorreu:
+`aws eks list-clusters` vem vazio e `aws s3 ls` não lista mais o bucket
+`oficina-tfstate-<account_id>` esperado.
+
+Se isso acontecer, refaça o bootstrap do zero com o novo `account_id`: crie o bucket de
+novo (próxima seção), rode `terraform init -reconfigure` (não `-migrate-state`, já que
+não há nada para migrar) e atualize o secret `TF_STATE_BUCKET` no GitHub com o novo nome
+de bucket.
+
+A **VPC default também é outra** (é uma conta nova, não só um bucket a menos) - os
+`subnet_ids` de `terraform.tfvars` de uma sessão anterior não existem na conta nova e o
+`terraform apply` falha. Descubra as subnets atuais e atualize tanto `terraform.tfvars`
+quanto o secret `AWS_SUBNET_IDS` no GitHub:
+
+```bash
+aws ec2 describe-subnets --filters Name=default-for-az,Values=true \
+  --query 'Subnets[].[SubnetId,AvailabilityZone]' --output table
+```
+
+Escolha 3 subnets em AZs diferentes - evite `us-east-1e`, que historicamente rejeita o
+control plane do EKS (`UnsupportedAvailabilityZoneException`); `us-east-1a`, `1b`, `1c`,
+`1d` e `1f` funcionam.
+
+## Bootstrap do backend remoto (uma única vez por conta do Academy)
 
 O `terraform apply` roda tanto manualmente (primeira vez, para criar o cluster) quanto
 pelo job `deploy` do CI/CD a cada push (ver `.github/workflows/ci-cd.yml`) - para isso
